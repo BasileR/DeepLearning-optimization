@@ -87,7 +87,7 @@ elif args.dataset == 'cifar10':
     transforms.ToTensor(),
     transforms.RandomErasing()
     ])
-    dataset = CIFAR10(root='data/', download=False, transform=transform_train)
+    dataset = CIFAR10(root='data/', download=True, transform=transform_train)
     test_dataset = CIFAR10(root='data/', train=False, transform=transforms.ToTensor())
     val_size = 5000
     train_size = len(dataset) - val_size
