@@ -99,7 +99,8 @@ elif args.dataset == 'cifar10':
     backbonemodel = resnet.ResNet18(N = 10)
 
 #### add tensorboard writer ####
-writer = SummaryWriter('logs/'+args.name)
+if args.train :
+    writer = SummaryWriter('logs/'+args.name)
 
 #### create optimizer, criterion and scheduler ####
 
