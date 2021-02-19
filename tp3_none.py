@@ -83,7 +83,7 @@ def train(model,trainloader,validloader,criterion,optimizer,epochs,device,writer
 
         model, training_loss = train_one_epoch(model,trainloader,criterion,optimizer,epoch,device)
         val_loss,val_acc = validate(model,validloader,criterion,epoch,device)
-        
+
         #scheduler.step(val_loss)
         writer.add_scalars('Losses', {'val' : val_loss ,'train' : training_loss}  , epoch + 1)
         writer.add_scalar('Validation Accuracy', val_acc  , epoch + 1)
@@ -182,7 +182,9 @@ def test(model,testloader,criterion,device,PATH) :
     print(' -> Test Accuracy = {}'.format(test_acc))
     print(' -> Test Loss     = {}'.format(test_loss))
     f= open("./logs/{}/results_none.txt".format(PATH),"w+")
-    f.write(str(100 * correct / total))
+    f.write(' -> Test Accuracy = {}'.format(test_acc))
+    print('\n')
+    f.write(' -> Test Loss     = {}'.format(test_loss))
     f.close()
 
     return test_loss,test_acc

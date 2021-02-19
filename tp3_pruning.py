@@ -66,6 +66,7 @@ def test(model,testloader,criterion,device,PATH,ratio) :
     print(' -> Test Loss     = {}'.format(test_loss))
     f= open("./logs/{}/results_pruning_ratio{}.txt".format(PATH,ratio),"w+")
     f.write(' -> Test Accuracy = {}'.format(test_acc))
+    print('\n')
     f.write(' -> Test Loss     = {}'.format(test_loss))
     f.close()
 

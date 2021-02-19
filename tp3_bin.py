@@ -190,7 +190,9 @@ def test(bcmodel,testloader,criterion,device,PATH) :
     print(' -> Test Accuracy = {}'.format(test_acc))
     print(' -> Test Loss     = {}'.format(test_loss))
     f= open("./logs/{}/results_bin.txt".format(PATH),"w+")
-    f.write(str(100 * correct / total))
+    f.write(' -> Test Accuracy = {}'.format(test_acc))
+    print('\n')
+    f.write(' -> Test Loss     = {}'.format(test_loss))
     f.close()
 
     return test_loss,test_acc
