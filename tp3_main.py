@@ -66,6 +66,8 @@ parser.add_argument('--optimizer', type = str , choices = ['sgd','adam'], defaul
 
 ## quantization
 parser.add_argument('--quantization', type = str , choices = ['half','binarization','pruning','none'] , default = 'none' )
+parser.add_argument('--ratio', type = float, default = 0.3 , help = 'ratio for pruning')
+
 
 
 args = parser.parse_args()
@@ -76,6 +78,8 @@ if args.dataset == 'minicifar':
     trainloader = DataLoader(minicifar_train,batch_size=args.batch_size,sampler=train_sampler)
     validloader = DataLoader(minicifar_train,batch_size=args.batch_size,sampler=valid_sampler)
     testloader = DataLoader(minicifar_test,batch_size=args.batch_size)
+    #### create model ####
+    backbonemodel = resnet.ResNet18(N = 4)
 elif args.dataset == 'cifar10':
 
     transform_train = transforms.Compose([
@@ -91,12 +95,11 @@ elif args.dataset == 'cifar10':
     trainloader = DataLoader(train_ds,batch_size=args.batch_size)
     validloader = DataLoader(val_ds,batch_size=args.batch_size)
     testloader = DataLoader(test_dataset,batch_size=args.batch_size)
+    #### create model ####
+    backbonemodel = resnet.ResNet18(N = 10)
 
 #### add tensorboard writer ####
 writer = SummaryWriter('logs/'+args.name)
-
-#### create model ####
-backbonemodel = resnet.ResNet18()
 
 #### create optimizer, criterion and scheduler ####
 
@@ -167,7 +170,7 @@ elif args.test:
         tp3_none.test(backbonemodel,testloader,criterion,device,args.path)
     elif args.quantization =='pruning':
         backbonemodel = backbonemodel.to(device)
-        tp3_pruning.test(backbonemodel,testloader,criterion,device,args.path)
+        tp3_pruning.test(backbonemodel,testloader,criterion,device,args.path,args.ratio)
 
 else:
     print('Need to select either --train or --test')
