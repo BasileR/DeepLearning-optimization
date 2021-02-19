@@ -12,7 +12,7 @@ from torch.utils.data.dataloader import DataLoader
 from torchvision import models
 import torch.optim as optim
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from torchvision.transforms import ToTensor
+import torchvision.transforms
 ##dataset
 from minicifar import minicifar_train,minicifar_test,train_sampler,valid_sampler
 from torchvision.datasets import CIFAR10
@@ -77,8 +77,14 @@ if args.dataset == 'minicifar':
     validloader = DataLoader(minicifar_train,batch_size=args.batch_size,sampler=valid_sampler)
     testloader = DataLoader(minicifar_test,batch_size=args.batch_size)
 elif args.dataset == 'cifar10':
-    dataset = CIFAR10(root='data/', download=False, transform=ToTensor())
-    test_dataset = CIFAR10(root='data/', train=False, transform=ToTensor())
+
+    transform_train = transforms.Compose([
+    transforms.RandomRotation(90),
+    transforms.ToTensor(),
+    transforms.RandomErasing()
+    ])
+    dataset = CIFAR10(root='data/', download=False, transform=transform_train)
+    test_dataset = CIFAR10(root='data/', train=False, transform=transforms.ToTensor())
     val_size = 5000
     train_size = len(dataset) - val_size
     train_ds, val_ds = random_split(dataset, [train_size, val_size])
