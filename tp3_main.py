@@ -122,22 +122,23 @@ for arg in vars(args):
 print('{0:20} {1}'.format('GPU',use_gpu))
 print('='*10 + '==================' + '='*10)
 
-f = open('./logs/{}/experience_config.txt'.format(args.name),'w+')
-f.write('='*10 + ' EXPERIENCE CONFIG ' + '='*10)
-f.write('\n')
-print('{0:20} {1}'.format('model', 'ResNet18'))
-f.write('\n')
-print('{0:20} {1}'.format('Nb of parameters',params))
-f.write('\n')
-for arg in vars(args):
-    f.write('{0:20} {1}'.format(arg, getattr(args, arg)))
+if args.train :
+    f = open('./logs/{}/experience_config.txt'.format(args.name),'w+')
+    f.write('='*10 + ' EXPERIENCE CONFIG ' + '='*10)
     f.write('\n')
-f.write('{0:20} {1}'.format('GPU',use_gpu))
-f.write('\n')
-f.write('{0:20} {1}'.format('Nb of parameters',params))
-f.write('\n')
-f.write('='*10 + '==================' + '='*10)
-f.close()
+    print('{0:20} {1}'.format('model', 'ResNet18'))
+    f.write('\n')
+    print('{0:20} {1}'.format('Nb of parameters',params))
+    f.write('\n')
+    for arg in vars(args):
+        f.write('{0:20} {1}'.format(arg, getattr(args, arg)))
+        f.write('\n')
+    f.write('{0:20} {1}'.format('GPU',use_gpu))
+    f.write('\n')
+    f.write('{0:20} {1}'.format('Nb of parameters',params))
+    f.write('\n')
+    f.write('='*10 + '==================' + '='*10)
+    f.close()
 
 #### training and test processes ####
 if args.train and not args.test :
