@@ -9,3 +9,7 @@ logs/
 __pycache__/*
 __pycache__/
 /__pycache__/
+
+__.ipynb_checkpoints__/*
+__.ipynb_checkpoints__/
+/__.ipynb_checkpoints__/
