@@ -1,5 +1,7 @@
 from tqdm import tqdm
 import torch
+import torch.autograd.profiler as profiler
+
 
 def train_one_epoch(model,trainloader,criterion,optimizer,epoch,device):
     ####create bar
@@ -159,8 +161,19 @@ def test(model,testloader,criterion,device,PATH) :
         running_loss = 0
 
         # forward pass but without grad
-        with torch.no_grad():
-            pred = model(inputs)
+        if i == 0 :
+
+            with profiler.profile(profile_memory = True, record_shapes = True, use_cuda = True) as prof:
+
+                with torch.no_grad():
+                    pred = model(inputs)
+            print()
+            f= open("./logs/{}/profiler.txt".format(PATH),"w+")
+            f.write(prof.key_averages().table())
+            f.close()
+        else :
+                with torch.no_grad():
+                    pred = model(inputs)
 
         # update loss, calculated by cpu
         running_loss = criterion(pred,labels).cpu().item()
@@ -183,7 +196,7 @@ def test(model,testloader,criterion,device,PATH) :
     print(' -> Test Loss     = {}'.format(test_loss))
     f= open("./logs/{}/results_none.txt".format(PATH),"w+")
     f.write(' -> Test Accuracy = {}'.format(test_acc))
-    print('\n')
+    f.write('\n')
     f.write(' -> Test Loss     = {}'.format(test_loss))
     f.close()
 
