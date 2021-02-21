@@ -19,6 +19,8 @@ def test(model,testloader,criterion,device,PATH,ratio) :
     for name, module in model.named_modules():
         if isinstance(module, torch.nn.Conv2d):
             module = prune.l1_unstructured(module, 'weight', ratio)
+            #module = prune.random_structured(module, 'weight', ratio,dim =0)
+            #module = prune.ln_structured(module, 'weight', ratio,n =2,dim=0)
 
     #### set bar
     bar = tqdm(total=len(testloader), desc="[Test]")
@@ -77,7 +79,7 @@ def test(model,testloader,criterion,device,PATH,ratio) :
 
     print(' -> Test Accuracy = {}'.format(test_acc))
     print(' -> Test Loss     = {}'.format(test_loss))
-    f= open("./logs/{}/results_pruning_ratio{}.txt".format(PATH,ratio),"w+")
+    f= open("./logs/{}/results_random_ratio{}.txt".format(PATH,ratio),"w+")
     f.write(' -> Test Accuracy = {}'.format(test_acc))
     print('\n ')
     f.write(' -> Test Loss     = {}'.format(test_loss))
