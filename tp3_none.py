@@ -19,7 +19,7 @@ def train_one_epoch(model,trainloader,criterion,optimizer,epoch,device):
         labels = labels.to(device)
 
         # zero the parameter gradients
-        optimizer.zero_grad(set_to_none = True)
+        optimizer.zero_grad()
         # forward + backward + optimize
         outputs = model(inputs)
         loss_step  = criterion(outputs, labels)
@@ -96,7 +96,6 @@ def train(model,trainloader,validloader,criterion,optimizer,epochs,device,writer
                 best_model = model
                 #min_val_loss = val_loss
                 max_val_acc = val_acc
-                min_val_loss = val_loss
                 ## save model
                 PATH = './logs/{}/model_weights.pth'.format(name)
                 torch.save(model.state_dict(),PATH)
@@ -115,7 +114,6 @@ def train(model,trainloader,validloader,criterion,optimizer,epochs,device,writer
             if val_loss < min_val_loss and abs(val_loss - training_loss) < 0.2:
                 best_model = model
                 min_val_loss = val_loss
-                max_val_acc = val_acc
                 ## save model
                 PATH = './logs/{}/model_weights.pth'.format(name)
                 torch.save(model.state_dict(),PATH)
@@ -129,9 +127,10 @@ def train(model,trainloader,validloader,criterion,optimizer,epochs,device,writer
                 print('  -> Validation Loss     = {}'.format(val_loss))
                 print('  -> Validation Accuracy = {}'.format(val_acc))
 
+                end = epoch
 
     f= open("./logs/{}/epochs_overfitting.txt".format(name),"w+")
-    f.write('epoch nb {} , val acc {} , val loss {}'.format(end +1, min_val_loss, max_val_acc))
+    f.write('epoch nb {} , val acc {} , val loss {}'.format(end +1, val_acc, val_loss))
     f.close()
 
 
