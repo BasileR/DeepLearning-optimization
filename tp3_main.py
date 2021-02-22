@@ -70,6 +70,8 @@ parser.add_argument('--ratio', type = float, default = 0.3 , help = 'ratio for p
 
 
 
+
+
 args = parser.parse_args()
 
 #### choose dataset and set dataloaders ####
@@ -159,6 +161,12 @@ elif args.train and args.test:
         bcmodel.model = bcmodel.model.to(device)
         tp3_bin.train(bcmodel,trainloader,validloader,criterion,optimizer,args.epochs,device,writer,args.name,args.overfitting)
         tp3_bin.test(bcmodel,testloader,criterion,device,args.name)
+    elif args.quantization =='pruning':
+        backbonemodel = backbonemodel.to(device)
+        tp3_pruning.ptrain(backbonemodel,trainloader,validloader,criterion,optimizer,args.epochs,device,writer,args.name,args.overfitting,args.ratio,args.path)
+        tp3_pruning.test(backbonemodel,testloader,criterion,device,args.name,args.ratio)
+
+
 elif args.test:
     if args.quantization =='half':
         backbonemodel = backbonemodel.to(device)
@@ -172,7 +180,7 @@ elif args.test:
         tp3_none.test(backbonemodel,testloader,criterion,device,args.path)
     elif args.quantization =='pruning':
         backbonemodel = backbonemodel.to(device)
-        tp3_pruning.test(backbonemodel,testloader,criterion,device,args.path,args.ratio)
+        tp3_pruning.test(backbonemodel,testloader,criterion,device,args.name,args.ratio)
 
 else:
     print('Need to select either --train or --test')

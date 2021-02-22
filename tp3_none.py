@@ -109,7 +109,6 @@ def train(model,trainloader,validloader,criterion,optimizer,epochs,device,writer
                 print('  -> Validation Loss     = {}'.format(val_loss))
                 print('  -> Validation Accuracy = {}'.format(val_acc))
 
-                end = epoch
         else :
             if val_loss < min_val_loss and abs(val_loss - training_loss) < 0.2:
                 best_model = model
@@ -127,10 +126,9 @@ def train(model,trainloader,validloader,criterion,optimizer,epochs,device,writer
                 print('  -> Validation Loss     = {}'.format(val_loss))
                 print('  -> Validation Accuracy = {}'.format(val_acc))
 
-                end = epoch
 
     f= open("./logs/{}/epochs_overfitting.txt".format(name),"w+")
-    f.write('epoch nb {} , val acc {} , val loss {}'.format(end +1, val_acc, val_loss))
+    f.write('epoch nb {} , val acc {} , val loss {}'.format(end +1, max_val_acc, min_val_loss))
     f.close()
 
 
