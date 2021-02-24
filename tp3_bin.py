@@ -20,7 +20,8 @@ def train_one_epoch(bcmodel,trainloader,criterion,optimizer,epoch,device):
         # zero the parameter gradients
         optimizer.zero_grad(set_to_none = True)
         # forward + backward + optimize
-        bcmodel.binarization()
+        #bcmodel.binarization()
+        bcmodel.BWN()
         outputs = bcmodel.model(inputs)
         loss_step  = criterion(outputs, labels)
         loss_step.backward()
@@ -45,7 +46,8 @@ def validate(bcmodel,validloader,criterion,epoch,device):
     bcmodel.model.eval()
     total = 0
     correct = 0
-    bcmodel.binarization()
+    #bcmodel.binarization()
+    bcmodel.BWN()
     for i, data in enumerate(validloader,0):
 
         #extract data
@@ -149,7 +151,8 @@ def test(bcmodel,testloader,criterion,device,PATH) :
 
     #### set model to eval mode
     bcmodel.model.eval()
-    bcmodel.binarization()
+    #bcmodel.binarization()
+    bcmodel.BWN()
 
     total = 0
     correct = 0

@@ -149,19 +149,48 @@ def test(model,testloader,criterion,device,name,ratio) :
 
     #### pruning
 
-    PATH1 = 'logs/'+name+'/model_weights_p{}.pth'.format(ratio)
+    PATH1 = 'logs/'+name+'/model_weights.pth'.format(ratio)
 
     model.load_state_dict(torch.load(PATH1))
 
     #module = model.conv1
 
+    C = []
     L = []
+
     for name1, module in model.named_modules():
-        if isinstance(module, torch.nn.Conv2d) or isinstance(module, torch.nn.Linear) :
-            module = prune.l1_unstructured(module, 'weight', ratio)
+        if isinstance(module, torch.nn.Conv2d)  :
+            C.append((module,'weight'))
+            #module = prune.l1_unstructured(module, 'weight', ratio )
+        elif isinstance(module, torch.nn.Linear) :
+            L.append((module,'weight'))
+            #module = prune.l1_unstructured(module, 'weight', ratio)
+
+    prune.global_unstructured(C[5:10],pruning_method=prune.L1Unstructured,amount=ratio)
+    prune.global_unstructured(C[10:],pruning_method=prune.L1Unstructured,amount=ratio+0.4)
+    prune.global_unstructured(L,pruning_method=prune.L1Unstructured,amount=ratio+0.2)
+#        elif isinstance(module, torch.nn.Linear) :
+#            module = prune.l1_unstructured(module, 'weight', ratio + 0.2)
+
             #module = prune.random_structured(module, 'weight', ratio,dim =0)
             #module = prune.ln_structured(module, 'weight', ratio,n =2,dim=0)
+    for name1, module in model.named_modules():
+        if isinstance(module, torch.nn.Conv2d) or isinstance(module, torch.nn.Linear) :
+            print(
+                "Sparsity in {}t: {:.2f}%".format(name1,
+                    100. * float(torch.sum(module.weight == 0))
+                    / float(module.weight.nelement())
+                )
+            )
+    sum = 0
+    totals = 0
+    for tuple in C + L :
+        sum += torch.sum(tuple[0].weight == 0)
+        totals += tuple[0].weight.nelement()
 
+    print(
+    "Global sparsity: {:.2f}%".format(sum/totals * 100)
+    )
     #### set bar
     bar = tqdm(total=len(testloader), desc="[Test]")
 
@@ -219,10 +248,12 @@ def test(model,testloader,criterion,device,name,ratio) :
 
     print(' -> Test Accuracy = {}'.format(test_acc))
     print(' -> Test Loss     = {}'.format(test_loss))
-    f= open("./logs/{}/results_pruningafterretraining_ratio{}.txt".format(name,ratio),"w+")
+    f= open("./logs/{}/results_mixpruning_ratio{}.txt".format(name,ratio),"w+")
     f.write(' -> Test Accuracy = {}'.format(test_acc))
     print('\n ')
     f.write(' -> Test Loss     = {}'.format(test_loss))
+    print('\n ')
+    f.write(' -> global sparsity   = {}'.format(sum/totals))
     f.close()
 
     return test_loss,test_acc
