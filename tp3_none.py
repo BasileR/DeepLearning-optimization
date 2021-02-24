@@ -1,6 +1,7 @@
 from tqdm import tqdm
 import torch
 import torch.autograd.profiler as profiler
+import utils
 
 
 def train_one_epoch(model,trainloader,criterion,optimizer,epoch,device):
@@ -91,45 +92,22 @@ def train(model,trainloader,validloader,criterion,optimizer,epochs,device,writer
         writer.add_scalar('Validation Accuracy', val_acc  , epoch + 1)
         writer.flush()
 
-        if overfitting == 'acc':
-            if max_val_acc < val_acc:
-                best_model = model
-                #min_val_loss = val_loss
-                max_val_acc = val_acc
-                ## save model
-                PATH = './logs/{}/model_weights.pth'.format(name)
-                torch.save(model.state_dict(),PATH)
-                end = epoch
-                print('==> best model saved <==')
-                print('  -> Training   Loss     = {}'.format(training_loss))
-                print('  -> Validation Loss     = {}'.format(val_loss))
-                print('  -> Validation Accuracy = {}'.format(val_acc))
-            else:
-                print('  -> Training   Loss     = {}'.format(training_loss))
-                print('  -> Validation Loss     = {}'.format(val_loss))
-                print('  -> Validation Accuracy = {}'.format(val_acc))
-
-        else :
-            if val_loss < min_val_loss and abs(val_loss - training_loss) < 0.2:
-                best_model = model
-                min_val_loss = val_loss
-                ## save model
-                PATH = './logs/{}/model_weights.pth'.format(name)
-                torch.save(model.state_dict(),PATH)
-                end = epoch
-                print('==> best model saved <==')
-                print('  -> Training   Loss     = {}'.format(training_loss))
-                print('  -> Validation Loss     = {}'.format(val_loss))
-                print('  -> Validation Accuracy = {}'.format(val_acc))
-            else:
-                print('  -> Training   Loss     = {}'.format(training_loss))
-                print('  -> Validation Loss     = {}'.format(val_loss))
-                print('  -> Validation Accuracy = {}'.format(val_acc))
+        if val_loss < min_val_loss and abs(val_loss - training_loss) < 0.2:
+            best_model = model
+            min_val_loss = val_loss
+            ## save model
+            PATH = './logs/{}/model_weights_p{}.pth'.format(name,ratio)
+            torch.save(model.state_dict(),PATH)
+            end = epoch
+            print('==> best model saved <==')
 
 
-    f= open("./logs/{}/epochs_overfitting.txt".format(name),"w+")
-    f.write('epoch nb {} , val acc {} , val loss {}'.format(end +1, max_val_acc, min_val_loss))
-    f.close()
+        print('  -> Training   Loss     = {}'.format(training_loss))
+        print('  -> Validation Loss     = {}'.format(val_loss))
+        print('  -> Validation Accuracy = {}'.format(val_acc))
+
+
+    utils.save_train_results(path,val_acc,val_loss,end+1)
 
 
 def test(model,testloader,criterion,device,PATH) :
@@ -159,19 +137,9 @@ def test(model,testloader,criterion,device,PATH) :
         running_loss = 0
 
         # forward pass but without grad
-        if i == 0 :
+        with torch.no_grad():
+            pred = model(inputs)
 
-            with profiler.profile(profile_memory = True, record_shapes = True, use_cuda = True) as prof:
-
-                with torch.no_grad():
-                    pred = model(inputs)
-            print()
-            f= open("./logs/{}/profiler.txt".format(PATH),"w+")
-            f.write(prof.key_averages().table())
-            f.close()
-        else :
-                with torch.no_grad():
-                    pred = model(inputs)
 
         # update loss, calculated by cpu
         running_loss = criterion(pred,labels).cpu().item()
@@ -192,10 +160,6 @@ def test(model,testloader,criterion,device,PATH) :
 
     print(' -> Test Accuracy = {}'.format(test_acc))
     print(' -> Test Loss     = {}'.format(test_loss))
-    f= open("./logs/{}/results_none.txt".format(PATH),"w+")
-    f.write(' -> Test Accuracy = {}'.format(test_acc))
-    f.write('\n')
-    f.write(' -> Test Loss     = {}'.format(test_loss))
-    f.close()
+
 
     return test_loss,test_acc

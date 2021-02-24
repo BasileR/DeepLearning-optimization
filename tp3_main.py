@@ -29,12 +29,13 @@ import tp3_none
 import tp3_bin
 import tp3_halftest
 import tp3_pruning
-
+import utils
 #### check GPU usage ####
 
 use_gpu = torch.cuda.is_available()
 if use_gpu:
     device = torch.device('cuda:0')
+    torch.backends.cudnn.benchmark = True
 else:
     device = torch.device('cpu')
 
@@ -59,7 +60,6 @@ parser.add_argument('--epochs', type = int, default = 150  , help = 'Number of e
 parser.add_argument('--scheduler', action='store_true' , default = False, help = 'add a "ReduceLROnPlateau with factor 0.1"')
 parser.add_argument('--factor', type = float, default = 1e-1 , help = 'ReduceLROnPlateau factor')
 parser.add_argument('--batch_size', type = int, default = 32, help ='Batch size for DataLoader')
-parser.add_argument('--overfitting', type = str, choices = ['acc','loss'] ,default = 'loss' )
 
 ## optimizer
 parser.add_argument('--optimizer', type = str , choices = ['sgd','adam'], default = 'sgd' )
@@ -85,17 +85,20 @@ if args.dataset == 'minicifar':
 elif args.dataset == 'cifar10':
 
     transform_train = transforms.Compose([
-    transforms.RandomRotation(90),
+    transforms.RandomCrop(32, padding=4),
+    transforms.RandomHorizontalFlip(),
     transforms.ToTensor(),
-    transforms.RandomErasing()
+    transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
     ])
+
+    transform_test = transforms.Compose([transforms.ToTensor(),transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))])
     dataset = CIFAR10(root='data/', download=True, transform=transform_train)
-    test_dataset = CIFAR10(root='data/', train=False, transform=transforms.ToTensor())
+    test_dataset = CIFAR10(root='data/', train=False, transform=transform_test)
     val_size = 5000
     train_size = len(dataset) - val_size
     train_ds, val_ds = random_split(dataset, [train_size, val_size])
-    trainloader = DataLoader(train_ds,batch_size=args.batch_size)
-    validloader = DataLoader(val_ds,batch_size=args.batch_size)
+    trainloader = DataLoader(dataset,batch_size=args.batch_size)
+    validloader = DataLoader(test_dataset,batch_size=args.batch_size)
     testloader = DataLoader(test_dataset,batch_size=args.batch_size)
     #### create model ####
     backbonemodel = resnet.ResNet18(N = 10)
@@ -108,11 +111,46 @@ if args.train :
 
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(backbonemodel.parameters(), lr=args.lr, momentum=args.momentum,weight_decay=args.decay)
-scheduler = ReduceLROnPlateau(optimizer,'min',factor = args.factor)
+scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
 
 
 ##### check number of parameters ####
 params = sum(p.numel() for p in backbonemodel.parameters())
+
+def train(script,model,trainloader,validloader,criterion,optimizer,epochs,name):
+
+    min_val_loss = 100000
+    max_val_acc = 0
+    end = 0
+
+    for epoch in range(epochs):
+
+        print('='*10 + ' epoch ' + str(epoch+1) + '/' + str(epochs) + ' ' + '='*10)
+        model, training_loss = script.train_one_epoch(model,trainloader,criterion,optimizer,epoch,device)
+        val_loss,val_acc = script.validate(model,validloader,criterion,epoch,device)
+        scheduler.step()
+        writer.add_scalars('Losses', {'val' : val_loss ,'train' : training_loss}  , epoch + 1)
+        writer.add_scalar('Validation Accuracy', val_acc  , epoch + 1)
+        writer.flush()
+
+        if max_val_acc < val_acc and abs(val_loss - training_loss) < 0.2:
+            best_model = model
+            max_val_acc = val_acc
+            ## save model
+            if script == tp3_bin:
+                utils.save_weights(model.model,name)
+            else:
+                utils.save_weights(model,name)
+            end = epoch
+            print('==> best model saved <==')
+        print('  -> Training   Loss     = {}'.format(training_loss))
+        print('  -> Validation Loss     = {}'.format(val_loss))
+        print('  -> Validation Accuracy = {}'.format(val_acc))
+
+        utils.save_train_results(name,val_acc,val_loss,end+1)
+
+
+
 
 #### print and save experince config ####
 print('='*10 + ' EXPERIENCE CONFIG ' + '='*10)
@@ -128,10 +166,6 @@ if args.train :
     f = open('./logs/{}/experience_config.txt'.format(args.name),'w+')
     f.write('='*10 + ' EXPERIENCE CONFIG ' + '='*10)
     f.write('\n')
-    print('{0:20} {1}'.format('model', 'ResNet18'))
-    f.write('\n')
-    print('{0:20} {1}'.format('Nb of parameters',params))
-    f.write('\n')
     for arg in vars(args):
         f.write('{0:20} {1}'.format(arg, getattr(args, arg)))
         f.write('\n')
@@ -143,29 +177,27 @@ if args.train :
     f.close()
 
 #### training and test processes ####
-if args.train and not args.test :
-    if args.quantization =='none':
-        backbonemodel = backbonemodel.to(device)
-        tp3_none.train(backbonemodel,trainloader,validloader,criterion,optimizer,args.epochs,device,writer,args.name,args.overfitting)
-    elif args.quantization =='binarization':
-        bcmodel = binaryconnect.BC(backbonemodel)
-        bcmodel.model = bcmodel.model.to(device)
-        tp3_bin.train(bcmodel,trainloader,validloader,criterion,optimizer,args.epochs,device,writer,args.name,args.overfitting)
-elif args.train and args.test:
-    if args.quantization =='none':
-        backbonemodel = backbonemodel.to(device)
-        tp3_none.train(backbonemodel,trainloader,validloader,criterion,optimizer,args.epochs,device,writer,args.name,args.overfitting)
-        tp3_none.test(backbonemodel,testloader,criterion,device,args.name)
-    elif args.quantization =='binarization':
-        bcmodel = binaryconnect.BC(backbonemodel)
-        bcmodel.model = bcmodel.model.to(device)
-        tp3_bin.train(bcmodel,trainloader,validloader,criterion,optimizer,args.epochs,device,writer,args.name,args.overfitting)
-        tp3_bin.test(bcmodel,testloader,criterion,device,args.name)
-    elif args.quantization =='pruning':
-        backbonemodel = backbonemodel.to(device)
-        tp3_pruning.ptrain(backbonemodel,trainloader,validloader,criterion,optimizer,args.epochs,device,writer,args.name,args.overfitting,args.ratio,args.path)
-        tp3_pruning.test(backbonemodel,testloader,criterion,device,args.name,args.ratio)
 
+if args.quantization == 'binarization':
+    script = tp3_bin
+    backbonemodel = binaryconnect.BC(backbonemodel)
+    backbonemodel.model = backbonemodel.model.to(device)
+else:
+    if args.quantization == 'half':
+        backbonemodel = backbonemodel.half()
+        script = tp3_half
+    if args.quantization == 'pruning':
+        script = tp3_pruning
+    if args.quantization == 'none':
+        script = tp3_none
+    backbonemodel = backbonemodel.to(device)
+
+if args.train and not args.test :
+     train(script,backbonemodel,trainloader,validloader,criterion,optimizer,args.epochs,args.name)
+
+elif args.train and args.test:
+    train(script,backbonemodel,trainloader,validloader,criterion,optimizer,args.epochs,args.name)
+    script.test(bcmodel,testloader,criterion,device,args.path)
 
 elif args.test:
     if args.quantization =='half':

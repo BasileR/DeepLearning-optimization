@@ -1,5 +1,7 @@
 from tqdm import tqdm
 import torch
+import utils
+
 
 def test(model,testloader,criterion,device,PATH) :
     PATH1 = 'logs/'+PATH+'/model_weights.pth'
