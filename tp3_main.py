@@ -57,9 +57,10 @@ parser.add_argument('--lr', type = float, default = 1e-2 , help = 'Learning rate
 parser.add_argument('--momentum', type = float, default = 0.9 , help = 'momentum for Learning Rate')
 parser.add_argument('--decay', type = float, default = 1e-5 , help = 'decay')
 parser.add_argument('--epochs', type = int, default = 150  , help = 'Number of epochs for training')
-parser.add_argument('--scheduler', action='store_true' , default = False, help = 'add a "ReduceLROnPlateau with factor 0.1"')
+parser.add_argument('--scheduler', action='store_true' , default = True, help = 'add a "Cosine" with factor 0.1"')
 parser.add_argument('--factor', type = float, default = 1e-1 , help = 'ReduceLROnPlateau factor')
 parser.add_argument('--batch_size', type = int, default = 32, help ='Batch size for DataLoader')
+parser.add_argument('--overfitting', type = str , default = 'loss' ,choices = ['loss','accuracy'], help ='Choose overfitting type')
 
 ## optimizer
 parser.add_argument('--optimizer', type = str , choices = ['sgd','adam'], default = 'sgd' )
@@ -67,10 +68,6 @@ parser.add_argument('--optimizer', type = str , choices = ['sgd','adam'], defaul
 ## quantization
 parser.add_argument('--quantization', type = str , choices = ['half','binarization','pruning','none'] , default = 'none' )
 parser.add_argument('--ratio', type = float, default = 0.3 , help = 'ratio for pruning')
-
-
-
-
 
 args = parser.parse_args()
 
@@ -91,7 +88,9 @@ elif args.dataset == 'cifar10':
     transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
     ])
 
-    transform_test = transforms.Compose([transforms.ToTensor(),transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))])
+    transform_test = transforms.Compose([transforms.ToTensor(),
+    transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))])
+
     dataset = CIFAR10(root='data/', download=True, transform=transform_train)
     test_dataset = CIFAR10(root='data/', train=False, transform=transform_test)
     val_size = 5000
@@ -133,21 +132,34 @@ def train(script,model,trainloader,validloader,criterion,optimizer,epochs,name):
         writer.add_scalar('Validation Accuracy', val_acc  , epoch + 1)
         writer.flush()
 
-        if max_val_acc < val_acc :
-            best_model = model
-            max_val_acc = val_acc
-            ## save model
-            if script == tp3_bin:
-                utils.save_weights(model.model,name)
-            else:
-                utils.save_weights(model,name)
-            end = epoch
-            print('==> best model saved <==')
+        if args.overfitting == 'accuracy':
+            if max_val_acc < val_acc :
+                best_model = model
+                max_val_acc = val_acc
+                ## save model
+                if script == tp3_bin:
+                    utils.save_weights(model.model,name)
+                else:
+                    utils.save_weights(model,name)
+                end = epoch
+                print('==> best model saved <==')
+        elif args.overfitting == 'loss':
+            if val_loss < min_val_loss and abs(val_loss-training_loss) < 0.2 :
+                best_model = model
+                min_val_loss = val_loss
+                ## save model
+                if script == tp3_bin:
+                    utils.save_weights(model.model,name)
+                else:
+                    utils.save_weights(model,name)
+                end = epoch
+                print('==> best model saved <==')
+                utils.save_train_results(name,val_acc,val_loss,end+1)
         print('  -> Training   Loss     = {}'.format(training_loss))
         print('  -> Validation Loss     = {}'.format(val_loss))
         print('  -> Validation Accuracy = {}'.format(val_acc))
 
-        utils.save_train_results(name,val_acc,val_loss,end+1)
+
 
 
 

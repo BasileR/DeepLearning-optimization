@@ -234,3 +234,68 @@ def test(model,testloader,criterion,device,name,ratio) :
     f.close()
 
     return test_loss,test_acc
+
+
+
+def get_prune_model(model,pruning_method,ratio):
+
+
+    if pruning_method == 'uniform':
+        for name, module in model.named_modules():
+            if isinstance(module, torch.nn.Conv2d) or isinstance(module, torch.nn.Linear) :
+                module = prune.l1_unstructured(module, 'weight', ratio)
+
+
+    elif pruning_method == 'global':
+
+        parameters_to_prune = []
+
+        for name, module in model.named_modules():
+            if isinstance(module, torch.nn.Conv2d) or isinstance(module, torch.nn.Linear) :
+                parameters_to_prune.append((name,'weights'))
+
+        prune.global_unstructured(
+        parameters_to_prune,
+        pruning_method=prune.L1Unstructured,
+        amount=ratio,
+        )
+
+    elif pruning_method == 'decreasing':
+
+        C = []
+        L = []
+
+        for name, module in model.named_modules():
+            if isinstance(module, torch.nn.Conv2d)  :
+                C.append((module,'weight'))
+            elif isinstance(module, torch.nn.Linear) :
+                L.append((module,'weight'))
+
+        prune.global_unstructured(C[5:10],pruning_method=prune.L1Unstructured,amount=ratio)
+        prune.global_unstructured(C[10:],pruning_method=prune.L1Unstructured,amount=ratio+0.4)
+        prune.global_unstructured(L,pruning_method=prune.L1Unstructured,amount=ratio+0.2)
+
+    return model
+
+
+def get_sparsity(model,name):
+
+    PATH = 'logs/'+name+'/sparsity.txt'
+    f= open(PATH,"w")
+    for name1, module in model.named_modules():
+        if isinstance(module, torch.nn.Conv2d) or isinstance(module, torch.nn.Linear) :
+            txt1 = "Sparsity in {}t: {:.2f}%".format(name1,
+                100. * float(torch.sum(module.weight == 0))
+                / float(module.weight.nelement()))
+            print(txt)
+            f.write(txt)
+            f.write('\n')
+    sum = 0
+    totals = 0
+    for tuple in C + L :
+        sum += torch.sum(tuple[0].weight == 0)
+        totals += tuple[0].weight.nelement()
+        txt = "Global sparsity: {:.2f}%".format(sum/totals * 100)
+        print(txt)
+        f.write(txt)
+    f.close()
