@@ -133,7 +133,7 @@ def train(script,model,trainloader,validloader,criterion,optimizer,epochs,name):
         writer.add_scalar('Validation Accuracy', val_acc  , epoch + 1)
         writer.flush()
 
-        if max_val_acc < val_acc and abs(val_loss - training_loss) < 0.2:
+        if max_val_acc < val_acc :
             best_model = model
             max_val_acc = val_acc
             ## save model
@@ -197,7 +197,7 @@ if args.train and not args.test :
 
 elif args.train and args.test:
     train(script,backbonemodel,trainloader,validloader,criterion,optimizer,args.epochs,args.name)
-    script.test(bcmodel,testloader,criterion,device,args.path)
+    script.test(backbonemodel,testloader,criterion,device,args.path)
 
 elif args.test:
     if args.quantization =='half':
