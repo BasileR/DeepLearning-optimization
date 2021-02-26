@@ -143,6 +143,7 @@ def train(script,model,trainloader,validloader,criterion,optimizer,epochs,name):
                     utils.save_weights(model,name)
                 end = epoch
                 print('==> best model saved <==')
+                utils.save_train_results(name,val_acc,val_loss,end+1)
         elif args.overfitting == 'loss':
             if val_loss < min_val_loss and abs(val_loss-training_loss) < 0.2 :
                 best_model = model
