@@ -331,7 +331,6 @@ def train_iter(model,trainloader,validloader,criterion,optimizer,name,ratio,PATH
     return result
 
 
-
 def test(model,testloader,criterion,device,PATH) :
 
     PATH1 = 'logs/'+PATH+'/model_weights.pth'

@@ -106,12 +106,13 @@ class ResNet(nn.Module):
         out = self.layer4(out)
         out = F.avg_pool2d(out, 4)
         out = out.view(out.size(0), -1)
+        print(out.shape)
         out = self.linear(out)
         return out
 
 
 def ResNet18(N):
-    return ResNet(BasicBlock, [1, 2, 4, 1], num_classes = N, power_in_planes = 5 )
+    return ResNet(BasicBlock, [2, 2, 2, 2], num_classes = N, power_in_planes = 5 )
 
 
 def ResNet34():
