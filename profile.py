@@ -83,8 +83,6 @@ def profile(model, input_size, custom_ops = {}):
         m.register_buffer('total_params', torch.zeros(1))
 
         for p in m.parameters():
-            print(' non zero' , torch.count_nonzero(p.data))
-            print('all' , p.numel())
             m.total_params += torch.Tensor([torch.count_nonzero(p.data)]) / 2 # Division Free quantification
 
         if isinstance(m, nn.Conv2d):
@@ -136,6 +134,8 @@ def main(model = None):
     print("Flops: {}, Params: {}".format(flops,params))
     print("Score flops: {} Score Params: {}".format(score_flops,score_params))
     print("Final score: {}".format(score))
+
+    return(score)
 
 if __name__ == "__main__":
     main()

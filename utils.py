@@ -8,10 +8,12 @@ def save_weights(model,folder_name):
     torch.save(model.state_dict(),PATH)
 
 def save_test_results(path,test_acc,test_loss):
-    f= open("./logs/{}/results_none.txt".format(PATH),"w+")
+    f= open("./logs/{}/results.txt".format(path),"w+")
     f.write(' -> Test Accuracy = {}'.format(test_acc))
     f.write('\n')
     f.write(' -> Test Loss     = {}'.format(test_loss))
+    f.write('\n')
+
     f.close()
 
 def save_train_results(path,val_acc,val_loss,epoch):
@@ -21,4 +23,6 @@ def save_train_results(path,val_acc,val_loss,epoch):
     f.write(' -> Validation Accuracy = {}'.format(val_acc))
     f.write('\n')
     f.write(' -> Validation Loss     = {}'.format(val_loss))
+
+
     f.close()

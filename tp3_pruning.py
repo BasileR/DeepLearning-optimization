@@ -189,20 +189,9 @@ def test(model,testloader,criterion,device,name,ratio) :
         # set  loss
         running_loss = 0
 
-        # forward pass but without grad
-        if i == 0 :
 
-            with profiler.profile(profile_memory = True, record_shapes = True, use_cuda = True) as prof:
-
-                with torch.no_grad():
-                    pred = model(inputs)
-            print()
-            f= open("./logs/{}/profiler.txt".format(name),"w+")
-            f.write(prof.key_averages().table())
-            f.close()
-        else :
-                with torch.no_grad():
-                    pred = model(inputs)
+        with torch.no_grad():
+            pred = model(inputs)
 
 
 
@@ -244,6 +233,7 @@ def get_prune_model(model,pruning_method,ratio):
         for name, module in model.named_modules():
             if isinstance(module, torch.nn.Conv2d) or isinstance(module, torch.nn.Linear) :
                 module = prune.l1_unstructured(module, 'weight', ratio)
+                prune.remove(module,'weight')
 
 
     elif pruning_method == 'global':
@@ -252,13 +242,16 @@ def get_prune_model(model,pruning_method,ratio):
 
         for name, module in model.named_modules():
             if isinstance(module, torch.nn.Conv2d) or isinstance(module, torch.nn.Linear) :
-                parameters_to_prune.append((name,'weights'))
+                parameters_to_prune.append((module,'weight'))
 
         prune.global_unstructured(
         parameters_to_prune,
         pruning_method=prune.L1Unstructured,
         amount=ratio,
         )
+
+        for tuple in parameters_to_prune :
+            prune.remove(tuple[0], 'weight')
 
     elif pruning_method == 'decreasing':
 
@@ -274,6 +267,9 @@ def get_prune_model(model,pruning_method,ratio):
         prune.global_unstructured(C[5:10],pruning_method=prune.L1Unstructured,amount=ratio)
         prune.global_unstructured(C[10:],pruning_method=prune.L1Unstructured,amount=ratio+0.4)
         prune.global_unstructured(L,pruning_method=prune.L1Unstructured,amount=ratio+0.2)
+
+        for tuple in C[10:] + L  :
+            prune.remove(tuple[0], 'weight')
 
     return model
 
