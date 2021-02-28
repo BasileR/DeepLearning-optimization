@@ -28,7 +28,7 @@ import resnet
 import binaryconnect
 import tp3_bin
 import utils
-import profile
+import profiler
 
 #### check GPU usage ####
 
@@ -115,6 +115,7 @@ def get_prune_model(model,pruning_method,ratio):
         for name, module in model.named_modules():
             if isinstance(module, torch.nn.Conv2d) or isinstance(module, torch.nn.Linear) :
                 module = prune.l1_unstructured(module, 'weight', ratio)
+                #module = prune.ln_structured(module, 'weight', ratio,dim = 1 , n = 2)
                 prune.remove(module,'weight')
 
 
@@ -123,7 +124,7 @@ def get_prune_model(model,pruning_method,ratio):
         parameters_to_prune = []
 
         for name, module in model.named_modules():
-            if isinstance(module, torch.nn.Conv2d) or isinstance(module, torch.nn.Linear) :
+            if isinstance(module, torch.nn.Conv2d) or isinstance(module, torch.nn.Linear) or isinstance(module, torch.nn.BatchNorm2d) or isinstance(module, torch.nn.AvgPool2d)  :
                 parameters_to_prune.append((module,'weight'))
 
         prune.global_unstructured(
@@ -155,27 +156,24 @@ def get_prune_model(model,pruning_method,ratio):
 
     return model
 
-def get_sparsity(model,name):
+def get_sparsity(model):
 
-    PATH = 'logs/'+name+'/sparsity.txt'
-    f= open(PATH,"w")
+    L = []
     for name1, module in model.named_modules():
-        if isinstance(module, torch.nn.Conv2d) or isinstance(module, torch.nn.Linear) :
+        if isinstance(module, torch.nn.Conv2d) or isinstance(module, torch.nn.Linear) or isinstance(module, torch.nn.BatchNorm2d) or isinstance(module, torch.nn.AvgPool2d)  :
+            L.append((module,'weight'))
             txt1 = "Sparsity in {}t: {:.2f}%".format(name1,
                 100. * float(torch.sum(module.weight == 0))
                 / float(module.weight.nelement()))
-            print(txt)
-            f.write(txt)
-            f.write('\n')
+            print(txt1)
+
     sum = 0
     totals = 0
-    for tuple in C + L :
+    for tuple in L :
         sum += torch.sum(tuple[0].weight == 0)
         totals += tuple[0].weight.nelement()
         txt = "Global sparsity: {:.2f}%".format(sum/totals * 100)
-        print(txt)
-        f.write(txt)
-    f.close()
+    print(txt)
 
 def train_one_epoch(model,trainloader,criterion,optimizer,epoch):
     ####create bar
@@ -286,49 +284,6 @@ def train(model,trainloader,validloader,criterion,optimizer,epochs,name):
         print('  -> Validation Loss     = {}'.format(val_loss))
         print('  -> Validation Accuracy = {}'.format(val_acc))
 
-def train_iter(model,trainloader,validloader,criterion,optimizer,name,ratio,PATH):
-
-    PATH1 = 'logs/'+PATH+'/model_weights.pth'
-    model.load_state_dict(torch.load(PATH1))
-
-    result = []
-
-    min_val_loss = 100000
-    max_val_acc = 0
-    end = 0
-
-    counter = 0
-    for it in range(int(ratio/0.1)):
-        print('='*10 + ' Iteration ' + str(it) + '/' + str(int(ratio/0.1)) + ' ' + '='*10)
-        model = get_prune_model(model,'global',ratio - it*0.1)
-        val_loss,val_acc = validate(model,validloader,criterion,0)
-        print('accuracy before retraining : ', val_acc)
-        for epoch in range(10):
-
-            print('='*10 + ' epoch ' + str(epoch+1) + '/' + str(counter) + ' ' + '='*10)
-            model, training_loss = train_one_epoch(model,trainloader,criterion,optimizer,epoch)
-            val_loss,val_acc = validate(model,validloader,criterion,epoch)
-            scheduler.step()
-            writer.add_scalars('Losses', {'val' : val_loss ,'train' : training_loss}  , counter + 1)
-            writer.add_scalar('Validation Accuracy', val_acc  , counter + 1)
-            writer.flush()
-
-            if max_val_acc < val_acc :
-                best_model = model
-                max_val_acc = val_acc
-                ## save model
-
-                utils.save_weights(model,name)
-                end = epoch
-                print('==> best model saved <==')
-                utils.save_train_results(name,val_acc,val_loss,it)
-            print('  -> Training   Loss     = {}'.format(training_loss))
-            print('  -> Validation Loss     = {}'.format(val_loss))
-            print('  -> Validation Accuracy = {}'.format(val_acc))
-
-        result.append(max_val_acc)
-
-    return result
 
 
 def test(model,testloader,criterion,device,PATH) :
@@ -339,6 +294,7 @@ def test(model,testloader,criterion,device,PATH) :
 
     if args.pruning:
         model = get_prune_model(model,args.method,args.ratio)
+        get_sparsity(model)
     #### set bar
     bar = tqdm(total=len(testloader), desc="[Test]")
 
@@ -401,7 +357,7 @@ backbonemodel , trainloader , validloader , testloader = get_model_dataset(args.
 if args.score :
     if args.pruning:
         backbonemodel = get_prune_model(backbonemodel,args.method,args.ratio)
-    score = profile.main(backbonemodel)
+    score = profiler.main(backbonemodel)
     sys.exit('Kill after getting micronet score')
 
 
@@ -410,7 +366,10 @@ if args.score :
 
 criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(backbonemodel.parameters(), lr=args.lr, momentum=args.momentum,weight_decay=args.decay)
+#optimizer = optim.Adam(backbonemodel.parameters(), lr=args.lr,weight_decay=args.decay)
+
 scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
+#scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma = 0.95)
 
 
 ##### check number of parameters ####
@@ -430,16 +389,16 @@ print('='*10 + '==================' + '='*10)
 #### training and test processes ####
 
 
-
-
-
-
-
-#if args.train:
-#    writer = SummaryWriter('logs/'+args.name)
-#    backbonemodel = backbonemodel.to(device)
-#    train_iter(backbonemodel,trainloader,validloader,criterion,optimizer,args.name,args.ratio,args.path)
-#    sys.exit()
+if args.train and args.path != None:
+    writer = SummaryWriter('logs/'+args.name)
+    PATH = 'logs/'+args.path+'/model_weights.pth'
+    backbonemodel.load_state_dict(torch.load(PATH))
+    backbonemodel = backbonemodel.to(device)
+    backbonemodel = get_prune_model(backbonemodel,args.method,args.ratio)
+    val_loss,val_acc = validate(backbonemodel,validloader,criterion,0)
+    print('Before re training : loss = {} and acc = {}'.format(val_loss,val_acc))
+    train(backbonemodel,trainloader,validloader,criterion,optimizer,args.epochs,args.name)
+    sys.exit('re training done')
 
 
 if args.train :
