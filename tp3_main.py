@@ -17,6 +17,7 @@ from torch.nn.utils import prune
 ##dataset
 from minicifar import minicifar_train,minicifar_test,train_sampler,valid_sampler
 from torchvision.datasets import CIFAR10
+from torchvision.datasets import CIFAR100
 ##libraries
 from tqdm import tqdm
 import numpy as np
@@ -30,10 +31,13 @@ import tp3_bin
 import utils
 import profiler
 
+
+
 #### check GPU usage ####
 
 use_gpu = torch.cuda.is_available()
 if use_gpu:
+    torch.cuda.empty_cache()
     device = torch.device('cuda:0')
     torch.backends.cudnn.benchmark = True
 else:
@@ -47,7 +51,8 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--name', type = str ,default = 'demo' )
 parser.add_argument('--score', action='store_true' , default = False, help = 'micronet score')
 
-
+##model utilisé
+parser.add_argument('--modelToUse', type = str, default = 'ResNet18' , choices = ['ResNet18','ResNet34','ResNet50','ResNet101','ResNet152'], help ='Choose ResNet model to use')
 
 ## dataset
 parser.add_argument('--dataset', type = str , choices = ['minicifar','cifar10','cifar100'] , default = 'minicifar' )
@@ -73,14 +78,13 @@ args = parser.parse_args()
 
 #### choose dataset and set dataloaders ####
 
-def get_model_dataset(dataset,batch_size):
+def get_model_dataset(dataset,batch_size,modelToUse):
     if dataset == 'minicifar':
 
         trainloader = DataLoader(minicifar_train,batch_size=batch_size,sampler=train_sampler)
         validloader = DataLoader(minicifar_train,batch_size=batch_size,sampler=valid_sampler)
         testloader = DataLoader(minicifar_test,batch_size=batch_size)
-
-        model = resnet.ResNet18(N=4)
+        n = 4
 
     elif dataset == 'cifar10':
 
@@ -103,8 +107,49 @@ def get_model_dataset(dataset,batch_size):
         trainloader = DataLoader(dataset,batch_size=batch_size)
         validloader = DataLoader(test_dataset,batch_size=batch_size)
         testloader = DataLoader(test_dataset,batch_size=batch_size)
+        n = 10
 
-        model = resnet.ResNet18(N=10)
+    elif dataset == 'cifar100':
+
+        transform_train_1 = [transforms.RandomCrop(32, padding=4),
+                    transforms.RandomHorizontalFlip(),
+                     transforms.ToTensor(),
+                     transforms.Normalize(mean=[n/255.
+                        for n in [129.3, 124.1, 112.4]], std=[n/255. for n in [68.2,  65.4,  70.4]])]
+
+        transform_test_1 = [transforms.ToTensor(),
+                     transforms.Normalize(mean=[n/255.
+                        for n in [129.3, 124.1, 112.4]], std=[n/255. for n in [68.2,  65.4,  70.4]])]
+
+        transform_train = transforms.Compose(transform_train_1)
+        transform_test = transforms.Compose(transform_test_1)
+
+        dataset = CIFAR100(root='data/', download=True, transform=transform_train)
+        test_dataset = CIFAR100(root='data/', train=False, transform=transform_test)
+        
+        val_size = 10000
+        train_size = len(dataset) - val_size
+        train_ds, val_ds = random_split(dataset, [train_size, val_size])
+        trainloader = DataLoader(dataset,batch_size=batch_size)
+        validloader = DataLoader(test_dataset,batch_size=batch_size)
+        testloader = DataLoader(test_dataset,batch_size=batch_size)
+        n = 100
+
+
+    if modelToUse == 'ResNet18' : 
+        model = resnet.ResNet18(N=n)
+
+    elif modelToUse == 'ResNet34' :
+        model = resnet.ResNet34(N=n)
+
+    elif modelToUse == 'ResNet50' : 
+        model = resnet.ResNet50(N=n)
+
+    elif modelToUse == 'ResNet101' :
+        model = resnet.ResNet101(N=n)
+
+    elif modelToUse == 'ResNet152' :
+        model = resnet.ResNet152(N=n)
 
     return model , trainloader , validloader , testloader
 
@@ -348,7 +393,7 @@ def test(model,testloader,criterion,device,PATH) :
     return test_loss,test_acc
 
 
-backbonemodel , trainloader , validloader , testloader = get_model_dataset(args.dataset,args.batch_size)
+backbonemodel , trainloader , validloader , testloader = get_model_dataset(args.dataset,args.batch_size,args.modelToUse)
 
 
 ## prune the model if required
@@ -389,16 +434,16 @@ print('='*10 + '==================' + '='*10)
 #### training and test processes ####
 
 
-if args.train and args.path != None:
-    writer = SummaryWriter('logs/'+args.name)
-    PATH = 'logs/'+args.path+'/model_weights.pth'
-    backbonemodel.load_state_dict(torch.load(PATH))
-    backbonemodel = backbonemodel.to(device)
-    backbonemodel = get_prune_model(backbonemodel,args.method,args.ratio)
-    val_loss,val_acc = validate(backbonemodel,validloader,criterion,0)
-    print('Before re training : loss = {} and acc = {}'.format(val_loss,val_acc))
-    train(backbonemodel,trainloader,validloader,criterion,optimizer,args.epochs,args.name)
-    sys.exit('re training done')
+#if args.train and args.path != None:
+    #writer = SummaryWriter('logs/'+args.name)
+    #PATH = 'logs/'+args.path+'/model_weights.pth'
+    #backbonemodel.load_state_dict(torch.load(PATH))
+    #backbonemodel = backbonemodel.to(device)
+    #backbonemodel = get_prune_model(backbonemodel,args.method,args.ratio)
+    #val_loss,val_acc = validate(backbonemodel,validloader,criterion,0)
+    #print('Before re training : loss = {} and acc = {}'.format(val_loss,val_acc))
+    #train(backbonemodel,trainloader,validloader,criterion,optimizer,args.epochs,args.name)
+    #sys.exit('re training done')
 
 
 if args.train :
