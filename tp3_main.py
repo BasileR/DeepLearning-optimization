@@ -59,6 +59,7 @@ parser.add_argument('--dataset', type = str , choices = ['minicifar','cifar10','
 
 ## training settings
 parser.add_argument('--train', action='store_true' , default = False, help = 'perform training')
+parser.add_argument('--ptrain', action='store_true' , default = False, help = 'perform iterative/pruning training')
 parser.add_argument('--lr', type = float, default = 1e-2 , help = 'Learning rate')
 parser.add_argument('--momentum', type = float, default = 0.9 , help = 'momentum for Learning Rate')
 parser.add_argument('--decay', type = float, default = 5e-4 , help = 'decay')
@@ -126,7 +127,7 @@ def get_model_dataset(dataset,batch_size,modelToUse):
 
         dataset = CIFAR100(root='data/', download=True, transform=transform_train)
         test_dataset = CIFAR100(root='data/', train=False, transform=transform_test)
-        
+
         val_size = 10000
         train_size = len(dataset) - val_size
         train_ds, val_ds = random_split(dataset, [train_size, val_size])
@@ -136,13 +137,13 @@ def get_model_dataset(dataset,batch_size,modelToUse):
         n = 100
 
 
-    if modelToUse == 'ResNet18' : 
+    if modelToUse == 'ResNet18' :
         model = resnet.ResNet18(N=n)
 
     elif modelToUse == 'ResNet34' :
         model = resnet.ResNet34(N=n)
 
-    elif modelToUse == 'ResNet50' : 
+    elif modelToUse == 'ResNet50' :
         model = resnet.ResNet50(N=n)
 
     elif modelToUse == 'ResNet101' :
@@ -155,13 +156,11 @@ def get_model_dataset(dataset,batch_size,modelToUse):
 
 def get_prune_model(model,pruning_method,ratio):
 
-
     if pruning_method == 'uniform':
         for name, module in model.named_modules():
             if isinstance(module, torch.nn.Conv2d) or isinstance(module, torch.nn.Linear) :
                 module = prune.l1_unstructured(module, 'weight', ratio)
                 #module = prune.ln_structured(module, 'weight', ratio,dim = 1 , n = 2)
-                prune.remove(module,'weight')
 
 
     elif pruning_method == 'global':
@@ -177,27 +176,6 @@ def get_prune_model(model,pruning_method,ratio):
         pruning_method=prune.L1Unstructured,
         amount=ratio,
         )
-
-        for tuple in parameters_to_prune :
-            prune.remove(tuple[0], 'weight')
-
-    elif pruning_method == 'decreasing':
-
-        C = []
-        L = []
-
-        for name, module in model.named_modules():
-            if isinstance(module, torch.nn.Conv2d)  :
-                C.append((module,'weight'))
-            elif isinstance(module, torch.nn.Linear) :
-                L.append((module,'weight'))
-
-        prune.global_unstructured(C[5:10],pruning_method=prune.L1Unstructured,amount=ratio)
-        prune.global_unstructured(C[10:],pruning_method=prune.L1Unstructured,amount=ratio+0.4)
-        prune.global_unstructured(L,pruning_method=prune.L1Unstructured,amount=ratio+0.2)
-
-        for tuple in C[10:] + L  :
-            prune.remove(tuple[0], 'weight')
 
     return model
 
@@ -329,8 +307,6 @@ def train(model,trainloader,validloader,criterion,optimizer,epochs,name):
         print('  -> Validation Loss     = {}'.format(val_loss))
         print('  -> Validation Accuracy = {}'.format(val_acc))
 
-
-
 def test(model,testloader,criterion,device,PATH) :
 
     PATH1 = 'logs/'+PATH+'/model_weights.pth'
@@ -395,10 +371,6 @@ def test(model,testloader,criterion,device,PATH) :
 
 backbonemodel , trainloader , validloader , testloader = get_model_dataset(args.dataset,args.batch_size,args.modelToUse)
 
-
-## prune the model if required
-
-
 if args.score :
     if args.pruning:
         backbonemodel = get_prune_model(backbonemodel,args.method,args.ratio)
@@ -413,7 +385,7 @@ criterion = nn.CrossEntropyLoss()
 optimizer = optim.SGD(backbonemodel.parameters(), lr=args.lr, momentum=args.momentum,weight_decay=args.decay)
 #optimizer = optim.Adam(backbonemodel.parameters(), lr=args.lr,weight_decay=args.decay)
 
-scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
+scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
 #scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma = 0.95)
 
 
@@ -434,19 +406,16 @@ print('='*10 + '==================' + '='*10)
 #### training and test processes ####
 
 
-#if args.train and args.path != None:
-    #writer = SummaryWriter('logs/'+args.name)
-    #PATH = 'logs/'+args.path+'/model_weights.pth'
-    #backbonemodel.load_state_dict(torch.load(PATH))
-    #backbonemodel = backbonemodel.to(device)
-    #backbonemodel = get_prune_model(backbonemodel,args.method,args.ratio)
-    #val_loss,val_acc = validate(backbonemodel,validloader,criterion,0)
-    #print('Before re training : loss = {} and acc = {}'.format(val_loss,val_acc))
-    #train(backbonemodel,trainloader,validloader,criterion,optimizer,args.epochs,args.name)
-    #sys.exit('re training done')
-
-
 if args.train :
+
+    if args.path != None :
+        PATH = 'logs/'+args.path+'/model_weights.pth'
+        backbonemodel.load_state_dict(torch.load(PATH))
+
+    if args.pruning:
+        backbonemodel = get_prune_model(backbonemodel,args.method,args.ratio)
+        get_sparsity(backbonemodel)
+
     writer = SummaryWriter('logs/'+args.name)
     f = open('./logs/{}/experience_config.txt'.format(args.name),'w+')
     f.write('='*10 + ' EXPERIENCE CONFIG ' + '='*10)
@@ -463,6 +432,36 @@ if args.train :
 
     backbonemodel = backbonemodel.to(device)
     train(backbonemodel,trainloader,validloader,criterion,optimizer,args.epochs,args.name)
+
+elif args.ptrain :
+
+    for name, module in backbonemodel.named_modules():
+        if isinstance(module, torch.nn.Conv2d) or isinstance(module, torch.nn.Linear) or isinstance(module, torch.nn.BatchNorm2d) or isinstance(module, torch.nn.AvgPool2d):
+            module = prune.identity(module, 'weight')
+
+    PATH = 'logs/'+args.path+'/model_weights.pth'
+    backbonemodel = backbonemodel.to(device)
+    backbonemodel.load_state_dict(torch.load(PATH))
+
+    val_loss,val_acc = validate(backbonemodel,validloader,criterion,0)
+    print(' == First validation before training == ' )
+    print('  -> Validation Loss     = {}'.format(val_loss))
+    print('  -> Validation Accuracy = {}'.format(val_acc))
+
+    get_sparsity(backbonemodel)
+    ratio = args.ratio
+
+    for i in range(3):
+        print(' ================ ' )
+        dratio = 0.20
+        ratio += (1-ratio)*dratio
+        backbonemodel = get_prune_model(backbonemodel,args.method, dratio)
+        get_sparsity(backbonemodel)
+        writer = SummaryWriter('logs/'+args.name + str(ratio))
+        train(backbonemodel,trainloader,validloader,criterion,optimizer,args.epochs,args.name + str(ratio))
+
+
+
 
 if args.test :
     backbonemodel = backbonemodel.half().to(device)
