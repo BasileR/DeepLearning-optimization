@@ -26,6 +26,7 @@ import argparse
 import sys
 ##scripts
 import resnet
+import densnet
 import binaryconnect
 import tp3_bin
 import utils
@@ -52,7 +53,7 @@ parser.add_argument('--name', type = str ,default = 'demo' )
 parser.add_argument('--score', action='store_true' , default = False, help = 'micronet score')
 
 ##model utilisé
-parser.add_argument('--modelToUse', type = str, default = 'ResNet18' , choices = ['ResNet18','ResNet34','ResNet50','ResNet101','ResNet152'], help ='Choose ResNet model to use')
+parser.add_argument('--modelToUse', type = str, default = 'ResNet18' , choices = ['ResNet18','ResNet34','ResNet50','ResNet101','ResNet152', 'DensNet121', 'DensNet169', 'DensNet201', 'DensNet161', 'DensNetCifar'], help ='Choose ResNet model to use')
 
 ## dataset
 parser.add_argument('--dataset', type = str , choices = ['minicifar','cifar10','cifar100'] , default = 'minicifar' )
@@ -151,6 +152,22 @@ def get_model_dataset(dataset,batch_size,modelToUse):
 
     elif modelToUse == 'ResNet152' :
         model = resnet.ResNet152(N=n)
+
+    elif modelToUse == 'DensNet121':
+        model = densnet.DenseNet121(N=n)
+
+    elif modelToUse == 'DensNet169':
+        model = densnet.DenseNet169(N=n)
+
+    elif modelToUse == 'DensNet201':
+        model = densnet.DenseNet201(N=n)
+
+    elif modelToUse == 'DensNet161':
+        model = densnet.DenseNet161(N=n)
+
+    elif modelToUse == 'DensNetCifar':
+        model = densnet.densenet_cifar(N=n)
+
 
     return model , trainloader , validloader , testloader
 
