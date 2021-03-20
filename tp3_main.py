@@ -49,10 +49,10 @@ else:
 parser = argparse.ArgumentParser()
 
 ## infos
-parser.add_argument('--name', type = str ,default = 'demo' )
+parser.add_argument('--name', type = str , default = 'demo', help = 'name of the experience' )
 parser.add_argument('--score', action='store_true' , default = False, help = 'micronet score')
 
-##model utilisé
+## model used
 parser.add_argument('--modelToUse', type = str, default = 'ResNet18' , choices = ['ResNet18','ResNet34','ResNet50','ResNet101','ResNet152', 'DensNet121', 'DensNet169', 'DensNet201', 'DensNet161', 'DensNetCifar'], help ='Choose ResNet model to use')
 
 ## dataset
@@ -81,6 +81,18 @@ args = parser.parse_args()
 #### choose dataset and set dataloaders ####
 
 def get_model_dataset(dataset,batch_size,modelToUse):
+    '''
+    Parameters :
+    ------------
+    dataset (str) : name of the dataset to use
+    batch_size (int) : size of the batchs for dataloaders
+    modelToUse (str) : name of the model to used
+
+    Returns :
+    ---------
+    model : wanted model
+    train/valid/testloaders : dataloaders for training, validation and test
+    '''
     if dataset == 'minicifar':
 
         trainloader = DataLoader(minicifar_train,batch_size=batch_size,sampler=train_sampler)
@@ -173,12 +185,25 @@ def get_model_dataset(dataset,batch_size,modelToUse):
 
 def get_prune_model(model,pruning_method,ratio):
 
+    '''
+    Parameters :
+    ------------
+    model (object) : model that will be pruned
+    pruning_method (str) : method of pruning that will be used
+                           global     : see pytorch global_unstructured function
+                           uniform    : see pytorch prune function, applied to each layer
+    ratio (float) : ratio for pruning
+
+    Returns :
+    ---------
+    model : pruned model with a weight_mask (not remove)
+            For more information, see how pruning is done in pytorch and remove function
+    '''
+
     if pruning_method == 'uniform':
         for name, module in model.named_modules():
             if isinstance(module, torch.nn.Conv2d) or isinstance(module, torch.nn.Linear) :
                 module = prune.l1_unstructured(module, 'weight', ratio)
-                #module = prune.ln_structured(module, 'weight', ratio,dim = 1 , n = 2)
-
 
     elif pruning_method == 'global':
 
@@ -191,13 +216,20 @@ def get_prune_model(model,pruning_method,ratio):
         prune.global_unstructured(
         parameters_to_prune,
         pruning_method=prune.L1Unstructured,
-        amount=ratio,
-        )
+        amount=ratio)
 
     return model
 
 def get_sparsity(model):
+    '''
+    Parameters :
+    ------------
+    model (object) : model that will be pruned
 
+    Prints :
+    ---------
+    Percentage of zeros in each layer
+    '''
     L = []
     for name1, module in model.named_modules():
         if isinstance(module, torch.nn.Conv2d) or isinstance(module, torch.nn.Linear) or isinstance(module, torch.nn.BatchNorm2d) or isinstance(module, torch.nn.AvgPool2d)  :
@@ -215,7 +247,45 @@ def get_sparsity(model):
         txt = "Global sparsity: {:.2f}%".format(sum/totals * 100)
     print(txt)
 
+def pos_zeros(model):
+    '''
+    Parameters :
+    ------------
+    model (object) : model that will be pruned
+
+    Prints :
+    ---------
+    Number of feature maps that have more than 50% of zeros for each layer
+    '''
+    L = []
+
+    for name1, module in model.named_modules():
+        zeros = []
+        if isinstance(module, torch.nn.Conv2d) or isinstance(module, torch.nn.Linear):
+            L.append((module,'weight'))
+            for i in range(module.weight_mask.shape[0]):
+                A = int(100*float(torch.sum(module.weight_mask[i] == 0))/float(module.weight_mask[i].nelement()))
+                zeros.append(A)
+            print('{0:20} {1} / {2}'.format(name1, len([x for x in zeros if x > 50.0]),len(zeros)))
+
 def train_one_epoch(model,trainloader,criterion,optimizer,epoch):
+    '''
+    Description :
+    ------------
+    Perform training of the model for one epoch
+
+    Parameters :
+    ------------
+    model (object) : model to train
+    trainloader (object) : Dataloader of training set
+    criterion (object) : loss to use for training (see pytorch documentation)
+    optimizer (object) : optimizer to use for training (see pytorch documentation)
+
+    Returns :
+    ---------
+    model : model trained for one epoch
+    epoch_loss (float) : mean loss of the epoch
+    '''
     ####create bar
     bar = tqdm(total=len(trainloader), desc="[Train]")
 
@@ -249,6 +319,23 @@ def train_one_epoch(model,trainloader,criterion,optimizer,epoch):
     return model,epoch_loss
 
 def validate(model,validloader,criterion,epoch):
+    '''
+    Description :
+    ------------
+    Perform validation of the model
+
+    Parameters :
+    ------------
+    model (object) : model to train
+    validloader (object) : Dataloader of validation set
+    criterion (object) : loss to use for validation (see pytorch documentation)
+    optimizer (object) : optimizer to use for validation (see pytorch documentation)
+
+    Returns :
+    ---------
+    val_acc (float) : mean accuracy of the validation
+    val_loss (float) : mean loss of the validation
+    '''
     bar = tqdm(total=len(validloader), desc="[Val]")
     val_loss = 0
     model.eval()
@@ -286,6 +373,27 @@ def validate(model,validloader,criterion,epoch):
     return val_loss,val_acc
 
 def train(model,trainloader,validloader,criterion,optimizer,epochs,name):
+
+    '''
+    Description :
+    ------------
+    Perform training and validation (at each epoch) for several epochs
+
+    Parameters :
+    ------------
+    model (object) : model to train
+    trainloader (object) : Dataloader of training set
+    validloader (object) : Dataloader of validation set
+    criterion (object) : loss to use for validation (see pytorch documentation)
+    optimizer (object) : optimizer to use for validation (see pytorch documentation)
+    epochs (int) : number of epochs for training
+    name (str) : name of the experience
+
+    Returns :
+    ---------
+    val_acc (float) : mean accuracy of the validation
+    val_loss (float) : mean loss of the validation
+    '''
 
     min_val_loss = 100000
     max_val_acc = 0
@@ -325,8 +433,27 @@ def train(model,trainloader,validloader,criterion,optimizer,epochs,name):
         print('  -> Validation Accuracy = {}'.format(val_acc))
 
 def test(model,testloader,criterion,device,PATH) :
+    '''
+    Description :
+    ------------
+    Perform test of the model
+
+    Parameters :
+    ------------
+    model (object) : model to test
+    testloader (object) : Dataloader of test set
+    criterion (object) : loss to use for test (see pytorch documentation)
+    optimizer (object) : optimizer to use for test (see pytorch documentation)
+
+    Returns :
+    ---------
+    test_acc (float) : mean accuracy of the test
+    test_loss (float) : mean loss of the test
+    '''
 
     PATH1 = 'logs/'+PATH+'/model_weights.pth'
+
+    state_dict = torch.load(PATH1)
 
     model.load_state_dict(torch.load(PATH1))
 
@@ -386,9 +513,13 @@ def test(model,testloader,criterion,device,PATH) :
     return test_loss,test_acc
 
 
+## get model and dataloaders
+
 backbonemodel , trainloader , validloader , testloader = get_model_dataset(args.dataset,args.batch_size,args.modelToUse)
 
+## if --score is selected, then calculate the micronet score of the model
 if args.score :
+    ## prune the model if --pruning is selected
     if args.pruning:
         backbonemodel = get_prune_model(backbonemodel,args.method,args.ratio)
     score = profiler.main(backbonemodel)
@@ -422,18 +553,22 @@ print('='*10 + '==================' + '='*10)
 
 #### training and test processes ####
 
-
 if args.train :
 
+    ## if path is selected, then load the state_dict (weights)
     if args.path != None :
         PATH = 'logs/'+args.path+'/model_weights.pth'
         backbonemodel.load_state_dict(torch.load(PATH))
 
+    ## if pruning is selected, then prune model and print its sparsity
     if args.pruning:
         backbonemodel = get_prune_model(backbonemodel,args.method,args.ratio)
         get_sparsity(backbonemodel)
 
+    ## create tensorboard writer
     writer = SummaryWriter('logs/'+args.name)
+
+    ## save config in a text file
     f = open('./logs/{}/experience_config.txt'.format(args.name),'w+')
     f.write('='*10 + ' EXPERIENCE CONFIG ' + '='*10)
     f.write('\n')
@@ -447,42 +582,57 @@ if args.train :
     f.write('='*10 + '==================' + '='*10)
     f.close()
 
+    ## load model in the device (cpu or cuda)
     backbonemodel = backbonemodel.to(device)
+
+    ## train function
     train(backbonemodel,trainloader,validloader,criterion,optimizer,args.epochs,args.name)
 
+
+### ptrain is training and pruning iteratively
 elif args.ptrain :
 
+    ## create a mask with only ones
     for name, module in backbonemodel.named_modules():
         if isinstance(module, torch.nn.Conv2d) or isinstance(module, torch.nn.Linear) or isinstance(module, torch.nn.BatchNorm2d) or isinstance(module, torch.nn.AvgPool2d):
             module = prune.identity(module, 'weight')
 
+    ## Load pretrained weights
     PATH = 'logs/'+args.path+'/model_weights.pth'
-    backbonemodel = backbonemodel.to(device)
     backbonemodel.load_state_dict(torch.load(PATH))
 
+    ## load the model in the gpu or cpu
+    backbonemodel = backbonemodel.to(device)
+
+    ## first validation to see the first model
     val_loss,val_acc = validate(backbonemodel,validloader,criterion,0)
     print(' == First validation before training == ' )
     print('  -> Validation Loss     = {}'.format(val_loss))
     print('  -> Validation Accuracy = {}'.format(val_acc))
 
-    get_sparsity(backbonemodel)
+    ## training and pruning processes
     ratio = args.ratio
-
     for i in range(3):
-        print(' ================ ' )
+        print(' = '*10 )
+
+        ## increase pruning ratio
         dratio = 0.20
         ratio += (1-ratio)*dratio
+
+        ## prune the model
         backbonemodel = get_prune_model(backbonemodel,args.method, dratio)
-        get_sparsity(backbonemodel)
+
+        ## tensorboard writer adn training process
         writer = SummaryWriter('logs/'+args.name + str(ratio))
         train(backbonemodel,trainloader,validloader,criterion,optimizer,args.epochs,args.name + str(ratio))
 
-
-
-
+## test process
 if args.test :
+    ## .half to divide by 2 the precision on weights
     backbonemodel = backbonemodel.half().to(device)
+
+    ##test process
     test(backbonemodel,testloader,criterion,device,args.path)
 
 else:
-    print('Need to select either --train or --test')
+    sys.exit('Need to select either --train or --test')
