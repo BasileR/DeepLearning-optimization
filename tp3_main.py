@@ -74,6 +74,7 @@ parser.add_argument('--test', action='store_true' , default = False, help = 'per
 parser.add_argument('--path', type = str , help = 'path to pth in desired logs to find model_weights')
 parser.add_argument('--pruning', action='store_true' , default = False, help = 'perform pruning' )
 parser.add_argument('--method',  type = str , choices = ['uniform','global','decreasing'], default = 'global' )
+
 parser.add_argument('--ratio', type = float, default = 0.3 , help = 'ratio for pruning')
 
 args = parser.parse_args()
@@ -432,7 +433,7 @@ def train(model,trainloader,validloader,criterion,optimizer,epochs,name):
         print('  -> Validation Loss     = {}'.format(val_loss))
         print('  -> Validation Accuracy = {}'.format(val_acc))
 
-def test(model,testloader,criterion,device,PATH) :
+def test(model,testloader,criterion,device) :
     '''
     Description :
     ------------
@@ -450,17 +451,6 @@ def test(model,testloader,criterion,device,PATH) :
     test_acc (float) : mean accuracy of the test
     test_loss (float) : mean loss of the test
     '''
-
-    PATH1 = 'logs/'+PATH+'/model_weights.pth'
-
-    state_dict = torch.load(PATH1)
-
-    model.load_state_dict(torch.load(PATH1))
-
-    if args.pruning:
-        model = get_prune_model(model,args.method,args.ratio)
-        get_sparsity(model)
-    #### set bar
     bar = tqdm(total=len(testloader), desc="[Test]")
 
     #### set model to eval mode
@@ -500,10 +490,6 @@ def test(model,testloader,criterion,device,PATH) :
     test_acc = 100 * correct / total
     test_loss = test_loss/len(testloader)
 
-
-
-    ## save prediction
-    utils.save_test_results(PATH,test_acc,test_loss)
     bar.close()
 
     print(' -> Test Accuracy = {}'.format(test_acc))
@@ -512,38 +498,70 @@ def test(model,testloader,criterion,device,PATH) :
 
     return test_loss,test_acc
 
+def load_weights(model,PATH):
+    '''
+    Description :
+    ------------
+    Load weights on model, with weight mask or not
+
+    Parameters :
+    ------------
+    model (object) : model where to load wieghts
+    path (str) : folder to find .pth file
+    Returns :
+    ---------
+    model (model) : model with loaded weights
+    '''
+
+    PATH = 'logs/'+args.path+'/model_weights.pth'
+    state_dict = torch.load(PATH)
+
+    ## check if weight_mask and create if needed
+    if 'conv1.weight_mask' in state_dict.keys():
+        for name, module in backbonemodel.named_modules():
+            if isinstance(module, torch.nn.Conv2d) or isinstance(module, torch.nn.Linear) or isinstance(module, torch.nn.BatchNorm2d) or isinstance(module, torch.nn.AvgPool2d):
+                module = prune.identity(module, 'weight')
+
+    model.load_state_dict(state_dict)
+
+    return model
+
+def get_micronet_score(model,pruning,method,ratio):
+    '''
+    Description :
+    ------------
+    Print micronet score and it computation. Kill process after getting it
+
+    Parameters :
+    ------------
+    model (object) : model to evaluate
+    pruning (bool) : True if pruning is required
+    method (str)   : method of pruning
+    ratio (float)  : ratio of pruning
+    Prints :
+    ---------
+    Micronet score
+    '''
+    if pruning:
+        backbonemodel = get_prune_model(backbonemodel,method,ratio)
+    score = profiler.main(backbonemodel)
+    sys.exit('Kill after getting micronet score : {}'.format(score))
+
+def get_nb_params(model):
+    return sum(p.numel() for p in model.parameters())
 
 ## get model and dataloaders
 
 backbonemodel , trainloader , validloader , testloader = get_model_dataset(args.dataset,args.batch_size,args.modelToUse)
 
-## if --score is selected, then calculate the micronet score of the model
-if args.score :
-    ## prune the model if --pruning is selected
-    if args.pruning:
-        backbonemodel = get_prune_model(backbonemodel,args.method,args.ratio)
-    score = profiler.main(backbonemodel)
-    sys.exit('Kill after getting micronet score')
-
-
-
-#### create optimizer, criterion and scheduler ####
-
-criterion = nn.CrossEntropyLoss()
-optimizer = optim.SGD(backbonemodel.parameters(), lr=args.lr, momentum=args.momentum,weight_decay=args.decay)
-#optimizer = optim.Adam(backbonemodel.parameters(), lr=args.lr,weight_decay=args.decay)
-
-scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
-#scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma = 0.95)
-
 
 ##### check number of parameters ####
-params = sum(p.numel() for p in backbonemodel.parameters())
+params = get_nb_params(backbonemodel)
 
 
 #### print and save experince config ####
 print('='*10 + ' EXPERIENCE CONFIG ' + '='*10)
-print('{0:20} {1}'.format('model', 'ResNet18'))
+print('{0:20} {1}'.format('model', args.modelToUse))
 print('{0:20} {1}'.format('Nb of parameters',params))
 
 for arg in vars(args):
@@ -551,20 +569,36 @@ for arg in vars(args):
 print('{0:20} {1}'.format('GPU',use_gpu))
 print('='*10 + '==================' + '='*10)
 
+
+## if --score is selected, then calculate the micronet score of the model
+if args.score :
+    get_micronet_score(backbonemodel,args.pruning,args.method,args.ratio)
+
+#### create optimizer, criterion and scheduler ####
+
+criterion = nn.CrossEntropyLoss()
+
+optimizer = optim.SGD(backbonemodel.parameters(), lr=args.lr, momentum=args.momentum,weight_decay=args.decay)
+#optimizer = optim.Adam(backbonemodel.parameters(), lr=args.lr,weight_decay=args.decay)
+
+scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
+#scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma = 0.95)
+
+
+
+## get pretrained weights if path is not none
+if args.path != None :
+    backbonemodel = load_weights(backbonemodel,args.path)
+
+
+## if pruning is selected, then prune model and print its sparsity
+if args.pruning:
+    backbonemodel = get_prune_model(backbonemodel,args.method,args.ratio)
+    get_sparsity(backbonemodel)
+
 #### training and test processes ####
 
 if args.train :
-
-    ## if path is selected, then load the state_dict (weights)
-    if args.path != None :
-        PATH = 'logs/'+args.path+'/model_weights.pth'
-        backbonemodel.load_state_dict(torch.load(PATH))
-
-    ## if pruning is selected, then prune model and print its sparsity
-    if args.pruning:
-        backbonemodel = get_prune_model(backbonemodel,args.method,args.ratio)
-        get_sparsity(backbonemodel)
-
     ## create tensorboard writer
     writer = SummaryWriter('logs/'+args.name)
 
@@ -592,15 +626,6 @@ if args.train :
 ### ptrain is training and pruning iteratively
 elif args.ptrain :
 
-    ## create a mask with only ones
-    for name, module in backbonemodel.named_modules():
-        if isinstance(module, torch.nn.Conv2d) or isinstance(module, torch.nn.Linear) or isinstance(module, torch.nn.BatchNorm2d) or isinstance(module, torch.nn.AvgPool2d):
-            module = prune.identity(module, 'weight')
-
-    ## Load pretrained weights
-    PATH = 'logs/'+args.path+'/model_weights.pth'
-    backbonemodel.load_state_dict(torch.load(PATH))
-
     ## load the model in the gpu or cpu
     backbonemodel = backbonemodel.to(device)
 
@@ -622,7 +647,7 @@ elif args.ptrain :
         ## prune the model
         backbonemodel = get_prune_model(backbonemodel,args.method, dratio)
 
-        ## tensorboard writer adn training process
+        ## tensorboard writer and training process
         writer = SummaryWriter('logs/'+args.name + str(ratio))
         train(backbonemodel,trainloader,validloader,criterion,optimizer,args.epochs,args.name + str(ratio))
 
@@ -630,9 +655,9 @@ elif args.ptrain :
 if args.test :
     ## .half to divide by 2 the precision on weights
     backbonemodel = backbonemodel.half().to(device)
-
     ##test process
-    test(backbonemodel,testloader,criterion,device,args.path)
+    test_loss, test_acc = test(backbonemodel,testloader,criterion,device)
+    utils.save_test_results(args.path,test_acc,test_loss,args.pruning,args.ratio)
 
 else:
-    sys.exit('Need to select either --train or --test')
+    sys.exit('Need to select either --train or --test or --ptrain')

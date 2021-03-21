@@ -7,8 +7,12 @@ def save_weights(model,folder_name):
     PATH = './logs/{}/model_weights.pth'.format(folder_name)
     torch.save(model.state_dict(),PATH)
 
-def save_test_results(path,test_acc,test_loss):
-    f= open("./logs/{}/results.txt".format(path),"w+")
+def save_test_results(path,test_acc,test_loss,pruning,ratio):
+    full_path = "./logs/{}/results".format(path)
+    if pruning :
+        full_path += "pruned_{}".format(int(ratio*100))
+    full_path +=".txt"
+    f= open(full_path,"w+")
     f.write(' -> Test Accuracy = {}'.format(test_acc))
     f.write('\n')
     f.write(' -> Test Loss     = {}'.format(test_loss))
