@@ -570,9 +570,7 @@ print('{0:20} {1}'.format('GPU',use_gpu))
 print('='*10 + '==================' + '='*10)
 
 
-## if --score is selected, then calculate the micronet score of the model
-if args.score :
-    get_micronet_score(backbonemodel,args.pruning,args.method,args.ratio)
+
 
 #### create optimizer, criterion and scheduler ####
 
@@ -596,6 +594,10 @@ if args.pruning:
     backbonemodel = get_prune_model(backbonemodel,args.method,args.ratio)
     get_sparsity(backbonemodel)
 
+
+## if --score is selected, then calculate the micronet score of the model
+if args.score :
+    get_micronet_score(backbonemodel,args.pruning,args.method,args.ratio)
 ## training and test processes
 
 if args.train :
