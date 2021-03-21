@@ -18,7 +18,7 @@ Numpy, Tensorboard, Torchvision, tqdm, matplotlib and argparse. Please make sure
 
 This repo is made of :
 - the tp3_main.py script which contains the train, test and other useful functions to prune the network
-- resnet.py and densenet.py whiwh are the scripts of the ResNet and DenseNet models (see  https://github.com/kuangliu/pytorch-cifar)
+- resnet.py and densenet.py which are the scripts of the ResNet and DenseNet models (see  https://github.com/kuangliu/pytorch-cifar)
 - profiler.py to compute micronet score (see https://github.com/brain-bzh/ai-optim)
 - minicifar.py : create a small cifar10 with 4 classes and its dataloaders (see https://github.com/brain-bzh/ai-optim)
 - binaryconnect.py and tp3_bin.py to perform neural network binarization (see https://github.com/eghouti/BinaryConnect)
