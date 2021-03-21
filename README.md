@@ -19,8 +19,23 @@ Training, test and pruning processes can be easily done directly from the termin
 |--------|------|-------------|---------------|
 |  name  | str  | name of the experiment | demo |
 |  score  | bool  | compute micronet score | False |
-|  modelToUse  | str  | name of the architecture to use | resnet18 |
-|  dataset  | str  | name of the dataset to use | minicifar | Minicifar is a small version of cifar10 with 4 classes to predict, made by our teachers for the course.
+|  modelToUse  | str  | name of the architecture to use (resnets or densenets)| resnet18 |
+|  dataset  | str  | name of the dataset to use (minicifar, cifar10 or cifar100)| minicifar |
+|  train  | bool  | perform training if selected| False |
+|  test  | bool  | perform test if selected| False |
+|  ptrain  | bool  | perform training and pruning iteratively | False |
+|  optimizer  | str  | optimizer to use (adam or sgd) | sgd |
+|  lr  | float  | learning rate for optimizer | 0.01 |
+|  momentum  | float  | momentum for optimizer| 0.9 |
+|  decay  | float  | weight decay for optimizer| 5e-4 |
+|  epochs  | int  | number of epochs for training| 300 |
+|  batch_size  | int  | size of the batch to load | 32 |
+|  overfitting  | str  | function to optimize to save best model (accuracy or loss) | loss |
+|  path  | str  | path to load pretrained weights | None |
+|  pruning  | bool  | perform pruning on the model | False |
+|  method  | str  | perform pruning on the model (uniform or global) | global |
+|  ratio  | float  | ratio of parameters to prune and total number of parameters | 0.3 |
+
 
 
 
