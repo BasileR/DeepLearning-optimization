@@ -526,7 +526,7 @@ def load_weights(model,PATH):
 
     return model
 
-def get_micronet_score(model,pruning,method,ratio):
+def get_micronet_score(model):
     '''
     Description :
     ------------
@@ -535,15 +535,12 @@ def get_micronet_score(model,pruning,method,ratio):
     Parameters :
     ------------
     model (object) : model to evaluate
-    pruning (bool) : True if pruning is required
-    method (str)   : method of pruning
-    ratio (float)  : ratio of pruning
     Prints :
     ---------
     Micronet score
     '''
-    if pruning:
-        backbonemodel = get_prune_model(model,method,ratio)
+    #if pruning:
+    #    backbonemodel = get_prune_model(model,method,ratio)
     score = profiler.main(model)
     sys.exit('Kill after getting micronet score : {}'.format(score))
 
@@ -597,7 +594,10 @@ if args.pruning:
 
 ## if --score is selected, then calculate the micronet score of the model
 if args.score :
-    get_micronet_score(backbonemodel,args.pruning,args.method,args.ratio)
+    for name, module in backbonemodel.named_modules():
+            if isinstance(module, torch.nn.Conv2d) or isinstance(module, torch.nn.Linear) or isinstance(module, torch.nn.BatchNorm2d) or isinstance(module, torch.nn.AvgPool2d):
+                module = prune.remove(module, 'weight')
+    get_micronet_score(backbonemodel)
 ## training and test processes
 
 if args.train :
