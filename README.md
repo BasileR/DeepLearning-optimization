@@ -15,9 +15,14 @@ This repo is made of :
 
 Training, test and pruning processes can be easily done directly from the terminal using options: 
 
-| Option | Type | Description | Default |
-|--------|------|-------------|---------|
+| Option | Type | Description | Default value |
+|--------|------|-------------|---------------|
 |  name  | str  | name of the experiment | demo |
+|  score  | bool  | compute micronet score | False |
+|  modelToUse  | str  | name of the architecture to use | resnet18 |
+|  dataset  | str  | name of the dataset to use | minicifar | Minicifar is a small version of cifar10 with 4 classes to predict, made by our teachers for the course.
+
+
 
 ## Baseline first reduction of the model
 
