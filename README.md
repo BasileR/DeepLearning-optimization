@@ -41,29 +41,28 @@ Training, test and pruning processes can be easily done directly from the termin
 
 - To train a model on cifar10 :
 
-'''
-
+```
 python tp3_main.py --train --dataset cifar10 --overfitting accuracy --name cifar10_resnet18 --modelToUse resnet18 --lr 0.01 --momentum 0.9 --decay 5e-4 --batch_size 32 --epochs 300
+```
 
-'''
 
 - To test a model on cifar10 :
 
-'''
+```
 python tp3_main.py --test --dataset cifar10  --modelToUse resnet18 --batch_size 32 --path  cifar10_resnet18
-'''
+```
 
 - To prune a model and test it on cifar10 :
 
-'''
+```
 python tp3_main.py --test --dataset cifar10  --modelToUse resnet18 --batch_size 32 --path cifar10_resnet18 --pruning --method global --ratio 0.45
-'''
+```
 
 - To prune a model and get its micronet score on cifar10 :
 
-'''
+```
 python tp3_main.py --dataset cifar10  --modelToUse resnet18 --path cifar10_resnet18 --pruning --method global --ratio 0.45 --score
-'''
+```
 
 
 
