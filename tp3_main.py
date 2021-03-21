@@ -543,8 +543,8 @@ def get_micronet_score(model,pruning,method,ratio):
     Micronet score
     '''
     if pruning:
-        backbonemodel = get_prune_model(backbonemodel,method,ratio)
-    score = profiler.main(backbonemodel)
+        backbonemodel = get_prune_model(model,method,ratio)
+    score = profiler.main(model)
     sys.exit('Kill after getting micronet score : {}'.format(score))
 
 def get_nb_params(model):
@@ -596,7 +596,7 @@ if args.pruning:
     backbonemodel = get_prune_model(backbonemodel,args.method,args.ratio)
     get_sparsity(backbonemodel)
 
-#### training and test processes ####
+## training and test processes
 
 if args.train :
     ## create tensorboard writer
