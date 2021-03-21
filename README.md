@@ -31,7 +31,7 @@ Training, test and pruning processes can be easily done directly from the termin
 |  epochs  | int  | number of epochs for training| 300 |
 |  batch_size  | int  | size of the batch to load | 32 |
 |  overfitting  | str  | function to optimize to save best model (accuracy or loss) | loss |
-|  path  | str  | path to load pretrained weights | None |
+|  path  | str  | name of the folder where are the pretrained weights to load | None |
 |  pruning  | bool  | perform pruning on the model | False |
 |  method  | str  | perform pruning on the model (uniform or global) | global |
 |  ratio  | float  | ratio of parameters to prune and total number of parameters | 0.3 |
