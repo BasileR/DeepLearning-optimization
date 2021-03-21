@@ -2,7 +2,10 @@
 
 ## Introduction
 
-Hi ! Here is our repository for the AI optimization course at IMT Atlantique. The goal of this course was fitting a neural network for cifar10 and performing quantization and pruning to minimize the micronet score of the model. You can find here the repository of the course : https://github.com/brain-bzh/ai-optim . This repository is also inspired by https://github.com/kuangliu/pytorch-cifar and https://github.com/eghouti/BinaryConnect. Check out these great repos ! 
+Hi ! Here is our repository for the AI optimization course at IMT Atlantique. The goal of this course was fitting a neural network for cifar10 and performing quantization and pruning to minimize the micronet score of the model. Enjoy !
+
+
+You can find here the repository of the course : https://github.com/brain-bzh/ai-optim . This repository is also inspired by https://github.com/kuangliu/pytorch-cifar and https://github.com/eghouti/BinaryConnect. Check out these great repos ! 
 
 ## Structure of the repository
 
