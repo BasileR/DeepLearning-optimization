@@ -7,7 +7,7 @@ Hi ! Here is our repository for the AI optimization course at IMT Atlantique. Th
 ## Structure of the repository
 
 This repo is made of :
-- the tp3_main.py script which contains the train, test and other useful fonctions for pruning the network.
+- the tp3_main.py script which contains the train, test and other useful functions to prune the network.
 - resnet.py and densenet.py whiwh are the scripts of the ResNet and DenseNet models
 - logs folder will be created as we used tensorboard writer
 
@@ -17,9 +17,7 @@ Training, test and pruning processes can be easily done directly from the termin
 
 | Option | Type | Description | Default |
 |--------|------|-------------|---------|
-
-
-
+|  name  | str  | name of the experiment | demo |
 
 ## Baseline first reduction of the model
 
