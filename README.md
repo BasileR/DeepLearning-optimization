@@ -86,11 +86,11 @@ python tp3_main.py --dataset cifar10  --modelToUse resnet18 --path cifar10_resne
 
 The Micronet Challenge (https://micronet-challenge.github.io/) was about creating the lightest network which has a high accuracy on ImageNet, cifar100 or WikiText-103. Models were evaluated considering a micronet score, that was made of two parts : one to evaluate the number of computations required, and the other one to evaluate the number of parameters.
 
-The objective of this project was taking a existing network and reduce it as much as possible to **minimize its micronet score while keeping the accuracy over 90 %**.
+The objective of this project was taking an existing network and reduce it as much as possible to **minimize its micronet score while keeping the accuracy over 90 %**.
 
 ### Baseline and first reduction of the model
 
-We decided first to work on Resnet18 (https://arxiv.org/abs/1512.03385, implementation here : https://github.com/kuangliu/pytorch-cifar) with 12M parameters. We trained it from scratch on cifar10 and obtain 92.1% of accuracy. So as to decrease the number of parameters, we divided by 4 the number for feature maps created by each convolution : We got a model with 700k parameters , accuracy = 90.42 % and micronet score = 0.1260. 
+We decided first to work on Resnet18 (https://arxiv.org/abs/1512.03385, implementation here : https://github.com/kuangliu/pytorch-cifar) with 12M parameters. We trained it from scratch on cifar10 and obtain **92.1%** of accuracy. So as to decrease the number of parameters, we divided by 4 the number for feature maps created by each convolution : We got a model with 700k parameters , accuracy = **90.42 %** and micronet score = **0.1260**. 
 
 
 
