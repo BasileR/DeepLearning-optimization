@@ -112,10 +112,10 @@ We decided to reduce ResNet18 step by step :
 ### Results
 
 #### Best model without pruning : 
-ResNet18 without layer 4, power_in_planes = 4, 177k parameters, micronet score = 0.0624, accuracy = 90.21
+ResNet18 without layer 4, power_in_planes = 4, **177k parameters, micronet score = 0.0624, accuracy = 90.21 %**
 
 #### Best model with pruning : 
-We pruned previous model with a ratio of 0.45, retrained it to get : 97K parameters, micronet score = 0.0569, accuracy = 90.06
+We pruned previous model with a ratio of 0.45, retrained it to get : **97K parameters, micronet score = 0.0569, accuracy = 90.06 %**
 
 We also tried to delete the second part of layer 3 to have a model with 103k parameters without pruning (micronet score = 0.0489) but we couldn't get over 89.86% of accuracy when testing. It may need a bit more hyperparameters optimization !
 
