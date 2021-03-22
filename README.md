@@ -88,6 +88,14 @@ The Micronet Challenge (https://micronet-challenge.github.io/) was about creatin
 
 The objective of this project was taking an existing network and reduce it as much as possible to **minimize its micronet score while keeping the accuracy over 90 %**.
 
+### What is pruning ? 
+
+Pruning is a technique to compress neural networks. The idea is that small paramaters (in term of norm or distance) are less useful in the final decision that bigger ones. Then, we can remove these parameters (0 on pytorch implementation) without affecting too much the accuracy of the network. Purning can be easily done with pytorch : https://pytorch.org/tutorials/intermediate/pruning_tutorial.html.
+
+### Baseline and first reduction of the model
+
+We decided first to work on Resnet18 (https://arxiv.org/abs/1512.03385, implementation here : https://github.com/kuangliu/pytorch-cifar) with 12M parameters. We trained it from scratch on cifar10 and obtain **92.1%** of accuracy. So as to decrease the number of parameters, we divided by 4 the number for feature maps created by each convolution : We got a model with 700k parameters , accuracy = **90.42 %** and micronet score = **0.1260**. 
+
 ### Overall strategy
 
 We decided to reduce ResNet18 step by step :
@@ -95,13 +103,11 @@ We decided to reduce ResNet18 step by step :
 1. Train a model from sctrach.
 2. Prune and test the model to keep the best tradeoff (reduce micronet parameters score).
 3. Retrain the prune model so as to increase it accuracy, while keeping the zeros due to pruning.
-4. Look at the position of the zeros in the network : can we delete some layers ? 
+4. Look at the position of the zeros in the network : can we delete some layers as they are not useful ? 
 5. Change architecture : delete layers, modifying convolutions , ... (reduce micronet flops score).
 6. Train the resulting network from scratch.
 
-### Baseline and first reduction of the model
-
-We decided first to work on Resnet18 (https://arxiv.org/abs/1512.03385, implementation here : https://github.com/kuangliu/pytorch-cifar) with 12M parameters. We trained it from scratch on cifar10 and obtain **92.1%** of accuracy. So as to decrease the number of parameters, we divided by 4 the number for feature maps created by each convolution : We got a model with 700k parameters , accuracy = **90.42 %** and micronet score = **0.1260**. 
+### Results
 
 
 
