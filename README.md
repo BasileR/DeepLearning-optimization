@@ -92,6 +92,8 @@ The objective of this project was taking an existing network and reduce it as mu
 
 Pruning is a technique to compress neural networks. The idea is that small paramaters (in term of norm or distance) are less useful in the final decision that bigger ones. Then, we can remove these parameters (0 on pytorch implementation) without affecting too much the accuracy of the network. Purning can be easily done with pytorch : https://pytorch.org/tutorials/intermediate/pruning_tutorial.html.
 
+Pruning allows us to reduce the number of parameters of a model but not the number of computation as parameters are just "0". In term of score, performing pruning **do not** reduce the number of computation required by the model.
+
 ### Baseline and first reduction of the model
 
 We decided first to work on Resnet18 (https://arxiv.org/abs/1512.03385, implementation here : https://github.com/kuangliu/pytorch-cifar) with 12M parameters. We trained it from scratch on cifar10 and obtain **92.1%** of accuracy. So as to decrease the number of parameters, we divided by 4 the number for feature maps created by each convolution : We got a model with 700k parameters , accuracy = **90.42 %** and micronet score = **0.1260**. 
@@ -109,5 +111,11 @@ We decided to reduce ResNet18 step by step :
 
 ### Results
 
+#### Best model without pruning : 
+ResNet18 without layer 4, power_in_planes = 4, 177k parameters, micronet score = 0.0624, accuracy = 90.21
 
+#### Best model with pruning : 
+We pruned previous model with a ratio of 0.45, retrained it to get : 97K parameters, micronet score = 0.0569, accuracy = 90.06
+
+We also tried to delete the second part of layer 3 to have a model with 103k parameters without pruning (micronet score = 0.0489) but we couldn't get over 89.86% of accuracy when testing. It may need a bit more hyperparameters optimization !
 
