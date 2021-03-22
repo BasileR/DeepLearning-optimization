@@ -90,7 +90,7 @@ The objective of this project was taking an existing network and reduce it as mu
 
 ### What is pruning ? 
 
-Pruning is a technique to compress neural networks. The idea is that small paramaters (in term of norm or distance) are less useful in the final decision that bigger ones. Then, we can remove these parameters (0 on pytorch implementation) without affecting too much the accuracy of the network. Purning can be easily done with pytorch : https://pytorch.org/tutorials/intermediate/pruning_tutorial.html.
+Pruning is a technique to compress neural networks. The idea is that small paramaters (in term of norm or distance) are less useful in the final decision than bigger ones. Then, we can remove these parameters (0 in pytorch implementation) without affecting too much the test accuracy of the network. Pruning can be easily done with pytorch : https://pytorch.org/tutorials/intermediate/pruning_tutorial.html.
 
 Pruning allows us to reduce the number of parameters of a model but not the number of computation as parameters are just "0". In term of score, performing pruning **do not** reduce the number of computation required by the model.
 
