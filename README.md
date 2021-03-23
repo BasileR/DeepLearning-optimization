@@ -80,7 +80,11 @@ python tp3_main.py --test --dataset cifar10  --modelToUse resnet18 --batch_size 
 python tp3_main.py --dataset cifar10  --modelToUse resnet18 --path cifar10_resnet18 --pruning --method global --ratio 0.45 --score
 ```
 
+- To open tensorboard : in another terminal in the logs/ folder where cifar10_resnet18 is the name of the folder where checkpoints are saved
 
+```
+tensorboard --logdir cifar10_resnet18
+```
 
 ## Our experiments
 
