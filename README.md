@@ -1,4 +1,4 @@
-# ResNet-optim
+# DeepLearning-optimization
 
 Binarization and densenet are not added yet, working on it.
 
