@@ -1,6 +1,6 @@
 # ResNet-optim
 
-Binarization is not added yet, working on it.
+Binarization and densenet are not added yet, working on it.
 
 ## Introduction
 
