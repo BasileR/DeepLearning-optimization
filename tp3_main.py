@@ -52,9 +52,13 @@ parser.add_argument('--name', type = str , default = 'demo', help = 'name of the
 parser.add_argument('--score', action='store_true' , default = False, help = 'micronet score')
 
 ## model used
-parser.add_argument('--modelToUse', type = str, default = 'ResNet18' , choices = ['ResNet18','ResNet34','ResNet50','ResNet101','ResNet152', 'DensNet121', 'DensNet169', 'DensNet201', 'DensNet161', 'DensNetCifar'], help ='Choose ResNet model to use')
-
+parser.add_argument('--modelToUse', type = str, default = 'ResNet18' , choices = ['ResNet18','ResNet34'], help ='Choose ResNet model to use')
+parser.add_argument("--num_blocks", type=int, nargs="+", default=[2, 2, 2, 0])
+parser.add_argument("--power_in_planes",type = int, default=4)
 ## dataset
+
+
+
 parser.add_argument('--dataset', type = str , choices = ['minicifar','cifar10','cifar100'] , default = 'minicifar' )
 
 ## training settings
@@ -77,6 +81,7 @@ parser.add_argument('--method',  type = str , choices = ['uniform','global','dec
 parser.add_argument('--ratio', type = float, default = 0.3 , help = 'ratio for pruning')
 
 args = parser.parse_args()
+
 
 #### choose dataset and set dataloaders ####
 
@@ -151,10 +156,10 @@ def get_model_dataset(dataset,batch_size,modelToUse):
 
 
     if modelToUse == 'ResNet18' :
-        model = resnet.ResNet18(N=n)
+        model = resnet.ResNet18(N=n, num_blocks = args.num_blocks, power_in_planes = args.power_in_planes)
 
     elif modelToUse == 'ResNet34' :
-        model = resnet.ResNet34(N=n)
+        model = resnet.ResNet34(N=n, num_blocks = args.num_blocks, power_in_planes = args.power_in_planes)
 
     return model , trainloader , validloader , testloader
 

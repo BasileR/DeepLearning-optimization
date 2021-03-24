@@ -160,10 +160,15 @@ class ResNet(nn.Module):
         self.conv1 = nn.Conv2d(3, 2**power_in_planes, kernel_size=3,
                                stride=1, padding=1, bias=False)
         self.bn1 = nn.BatchNorm2d(2**power_in_planes)
-        self.layer1 = self._make_layer(block, 2**power_in_planes, num_blocks[0], stride=1)
-        self.layer2 = self._make_layer(block, 2**(power_in_planes+1), num_blocks[1], stride=2)
-        self.layer3 = self._make_layer(block, 2**(power_in_planes+2), num_blocks[2], stride=2)
-        #self.layer4 = self._make_layer(block, 2**(power_in_planes+3), num_blocks[3], stride=2)
+        print(num_blocks)
+        if num_blocks[0] != 0:
+            self.layer1 = self._make_layer(block, 2**power_in_planes, num_blocks[0], stride=1)
+        if num_blocks[1] != 0:
+            self.layer2 = self._make_layer(block, 2**(power_in_planes+1), num_blocks[1], stride=2)
+        if num_blocks[2] != 0:
+            self.layer3 = self._make_layer(block, 2**(power_in_planes+2), num_blocks[2], stride=2)
+        if num_blocks[3] != 0:
+            self.layer4 = self._make_layer(block, 2**(power_in_planes+3), num_blocks[3], stride=2)
         self.linear = nn.Linear(2**(power_in_planes+4)*block.expansion, num_classes)
 
     def _make_layer(self, block, planes, num_blocks, stride):
@@ -313,12 +318,12 @@ class ResNet(nn.Module):
         return test_loss,test_acc
 
 
-def ResNet18(N):
-    return ResNet(BasicBlock, [2, 2, 2, 0], num_classes = N, power_in_planes = 4)
+def ResNet18(N, num_blocks ,power_in_planes):
+    return ResNet(BasicBlock,num_blocks = num_blocks, num_classes = N, power_in_planes = 4)
 
 
-def ResNet34(N):
-    return ResNet(BasicBlock, [3, 4, 6, 3], num_classes = N, power_in_planes = 6)
+def ResNet34(N, num_blocks ,power_in_planes):
+    return ResNet(BasicBlock,num_blocks =num_blocks , num_classes = N, power_in_planes = 6)
 
 
 
