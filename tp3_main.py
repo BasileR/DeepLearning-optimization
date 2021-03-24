@@ -539,8 +539,6 @@ def get_micronet_score(model):
     ---------
     Micronet score
     '''
-    #if pruning:
-    #    backbonemodel = get_prune_model(model,method,ratio)
     score = profiler.main(model)
     sys.exit('Kill after getting micronet score : {}'.format(score))
 
@@ -565,8 +563,6 @@ for arg in vars(args):
     print('{0:20} {1}'.format(arg, getattr(args, arg)))
 print('{0:20} {1}'.format('GPU',use_gpu))
 print('='*10 + '==================' + '='*10)
-
-
 
 
 #### create optimizer, criterion and scheduler ####
