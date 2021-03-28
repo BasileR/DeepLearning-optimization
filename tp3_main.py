@@ -72,11 +72,13 @@ parser.add_argument('--batch_size', type = int, default = 32 , help ='Batch size
 parser.add_argument('--overfitting', type = str , default = 'loss' , choices = ['loss','accuracy'], help ='Choose overfitting type')
 parser.add_argument('--optimizer', type = str , choices = ['sgd','adam'], default = 'sgd' )
 
-## quantization
 parser.add_argument('--test', action='store_true' , default = False, help = 'perform test')
 parser.add_argument('--path', type = str , help = 'path to pth in desired logs to find model_weights')
+
+## quantization
 parser.add_argument('--pruning', action='store_true' , default = False, help = 'perform pruning' )
 parser.add_argument('--method',  type = str , choices = ['uniform','global','decreasing'], default = 'global' )
+parser.add_argument('--bin', action='store_true' , default = False, help = 'perform binarization' )
 
 parser.add_argument('--ratio', type = float, default = 0.3 , help = 'ratio for pruning')
 
@@ -211,33 +213,6 @@ def pos_zeros(model):
                 zeros.append(A)
             print('{0:20} {1} / {2}'.format(name1, len([x for x in zeros if x > 50.0]),len(zeros)))
 
-def load_weights(model,PATH):
-    '''
-    Description :
-    ------------
-    Load weights on model, with weight mask or not
-
-    Parameters :
-    ------------
-    model (object) : model where to load wieghts
-    path (str) : folder to find .pth file
-    Returns :
-    ---------
-    model (model) : model with loaded weights
-    '''
-
-    PATH = 'logs/'+args.path+'/model_weights.pth'
-    state_dict = torch.load(PATH)
-
-    ## check if weight_mask and create if needed
-    if 'conv1.weight_mask' in state_dict.keys():
-        for name, module in backbonemodel.named_modules():
-            if isinstance(module, torch.nn.Conv2d) or isinstance(module, torch.nn.Linear) or isinstance(module, torch.nn.BatchNorm2d) or isinstance(module, torch.nn.AvgPool2d):
-                module = prune.identity(module, 'weight')
-
-    model.load_state_dict(state_dict)
-
-    return model
 
 def get_micronet_score(model):
     '''
@@ -262,10 +237,8 @@ def get_nb_params(model):
 
 backbonemodel , trainloader , validloader , testloader = get_model_dataset(args.dataset,args.batch_size,args.modelToUse)
 
-
 ##### check number of parameters ####
 params = get_nb_params(backbonemodel)
-
 
 #### print and save experince config ####
 print('='*10 + ' EXPERIENCE CONFIG ' + '='*10)
@@ -288,12 +261,14 @@ optimizer = optim.SGD(backbonemodel.parameters(), lr=args.lr, momentum=args.mome
 scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=args.epochs)
 #scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma = 0.95)
 
+## binarization of the model
+if args.bin:
+    backbonemodel = binaryconnect.BC(backbonemodel)
 
 
 ## get pretrained weights if path is not none
 if args.path != None :
-    backbonemodel = load_weights(backbonemodel,args.path)
-
+    backbonemodel = backbonemodel.load_weights(args.path)
 
 ## if pruning is selected, then prune model and print its sparsity
 if args.pruning:
@@ -315,6 +290,12 @@ if args.score :
 if args.train :
 
 
+    ## load model in the device (cpu or cuda)
+    backbonemodel = backbonemodel.to(device)
+
+    ## train function
+    backbonemodel.train_model(trainloader,validloader,criterion,optimizer,scheduler,args.overfitting,args.epochs,args.name)
+
     ## save config in a text file
     f = open('./logs/{}/experience_config.txt'.format(args.name),'w+')
     f.write('='*10 + ' EXPERIENCE CONFIG ' + '='*10)
@@ -328,13 +309,6 @@ if args.train :
     f.write('\n')
     f.write('='*10 + '==================' + '='*10)
     f.close()
-
-    ## load model in the device (cpu or cuda)
-    backbonemodel = backbonemodel.to(device)
-
-    ## train function
-    backbonemodel.train(trainloader,validloader,criterion,optimizer,args.epochs,args.name)
-
 
 ### ptrain is training and pruning iteratively
 elif args.ptrain :
@@ -360,12 +334,12 @@ elif args.ptrain :
         ## prune the model
         backbonemodel = get_prune_model(backbonemodel,args.method, dratio)
 
-        backbonemodel.train(trainloader,validloader,criterion,optimizer,args.epochs,args.name+ str(ratio))
+        backbonemodel.train_model(trainloader,validloader,criterion,optimizer,args.epochs,args.name+ str(ratio))
 
 ## test process
 if args.test :
     ## .half to divide by 2 the precision on weights
-    backbonemodel = backbonemodel.half().to(device)
+    backbonemodel = backbonemodel.to(device)
     ##test process
     test_loss, test_acc = backbonemodel.test(testloader,criterion,device)
     utils.save_test_results(args.path,test_acc,test_loss,args.pruning,args.ratio)

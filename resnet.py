@@ -193,7 +193,7 @@ class ResNet(nn.Module):
         return out
 
 
-    def train(self,trainloader,validloader,criterion,optimizer,epochs,name):
+    def train_model(self,trainloader,validloader,criterion,optimizer,scheduler,overfitting,epochs,name):
 
         '''
         Description :
@@ -231,22 +231,22 @@ class ResNet(nn.Module):
             writer.add_scalar('Validation Accuracy', val_acc  , epoch + 1)
             writer.flush()
 
-            if args.overfitting == 'accuracy':
+            if overfitting == 'accuracy':
                 if max_val_acc < val_acc :
                     best_model = self
                     max_val_acc = val_acc
                     ## save model
 
-                    utils.save_weights(best_model,name)
+                    self.save_weights(name)
                     end = epoch
                     print('==> best model saved <==')
                     utils.save_train_results(name,val_acc,val_loss,end+1)
-            elif args.overfitting == 'loss':
+            elif overfitting == 'loss':
                 if val_loss < min_val_loss and abs(val_loss-training_loss) < 0.2 :
                     best_model = self
                     min_val_loss = val_loss
                     ## save model
-                    utils.save_weights(model,name)
+                    self.save_weights(name)
                     end = epoch
                     print('==> best model saved <==')
                     utils.save_train_results(name,val_acc,val_loss,end+1)
@@ -254,7 +254,7 @@ class ResNet(nn.Module):
             print('  -> Validation Loss     = {}'.format(val_loss))
             print('  -> Validation Accuracy = {}'.format(val_acc))
 
-    def test(model,testloader,criterion,device) :
+    def test(self,testloader,criterion,device) :
         '''
         Description :
         ------------
@@ -262,7 +262,7 @@ class ResNet(nn.Module):
 
         Parameters :
         ------------
-        model (object) : model to test
+
         testloader (object) : Dataloader of test set
         criterion (object) : loss to use for test (see pytorch documentation)
         optimizer (object) : optimizer to use for test (see pytorch documentation)
@@ -275,7 +275,7 @@ class ResNet(nn.Module):
         bar = tqdm(total=len(testloader), desc="[Test]")
 
         #### set model to eval mode
-        model.eval()
+        self.eval()
 
         total = 0
         correct = 0
@@ -294,7 +294,7 @@ class ResNet(nn.Module):
 
             # forward pass but without grad
             with torch.no_grad():
-                pred = model(inputs)
+                pred = self(inputs)
 
 
             # update loss, calculated by cpu
@@ -355,6 +355,40 @@ class ResNet(nn.Module):
             amount=ratio)
 
         return self
+
+    def load_weights(self,PATH):
+        '''
+        Description :
+        ------------
+        Load weights on model, with weight mask or not
+
+        Parameters :
+        ------------
+        model (object) : model where to load wieghts
+        path (str) : folder to find .pth file
+        Returns :
+        ---------
+        model (model) : model with loaded weights
+        '''
+
+        PATH = 'logs/'+PATH+'/model_weights.pth'
+        state_dict = torch.load(PATH)
+
+        ## check if weight_mask and create if needed
+        ## can't prune if binarization
+
+        if 'conv1.weight_mask' in state_dict.keys():
+            for name, module in backbonemodel.named_modules():
+                if isinstance(module, torch.nn.Conv2d) or isinstance(module, torch.nn.Linear) or isinstance(module, torch.nn.BatchNorm2d) or isinstance(module, torch.nn.AvgPool2d):
+                    module = prune.identity(module, 'weight')
+
+        self.load_state_dict(state_dict)
+
+        return self
+
+    def save_weights(self,folder_name):
+        PATH = './logs/{}/model_weights.pth'.format(folder_name)
+        torch.save(self.state_dict(),PATH)
 
 def ResNet18(N, num_blocks ,power_in_planes):
     return ResNet(BasicBlock,num_blocks = num_blocks, num_classes = N, power_in_planes = 4)

@@ -39,7 +39,6 @@ def train_one_epoch(bcmodel,trainloader,criterion,optimizer,epoch,device):
 
     return bcmodel,epoch_loss
 
-
 def validate(bcmodel,validloader,criterion,epoch,device):
     bar = tqdm(total=len(validloader), desc="[Val]")
     val_loss = 0
@@ -80,8 +79,7 @@ def validate(bcmodel,validloader,criterion,epoch,device):
 
     return val_loss,val_acc
 
-
-def train(bcmodel,trainloader,validloader,criterion,optimizer,epochs,device,writer,name,overfitting):
+def train_model(bcmodel,trainloader,validloader,criterion,optimizer,epochs,device,writer,name,overfitting):
 
     min_val_loss = 100000
     max_val_acc = 0
@@ -113,7 +111,6 @@ def train(bcmodel,trainloader,validloader,criterion,optimizer,epochs,device,writ
 
 
     utils.save_train_results(path,val_acc,val_loss,end+1)
-
 
 def test(bcmodel,testloader,criterion,device,PATH) :
 
