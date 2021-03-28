@@ -277,6 +277,8 @@ class ResNet(nn.Module):
         #### set model to eval mode
         self.eval()
 
+        self = self.half()
+
         total = 0
         correct = 0
         test_loss = 0
