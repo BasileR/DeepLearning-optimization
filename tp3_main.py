@@ -163,43 +163,6 @@ def get_model_dataset(dataset,batch_size,modelToUse):
 
     return model , trainloader , validloader , testloader
 
-def get_prune_model(model,pruning_method,ratio):
-
-    '''
-    Parameters :
-    ------------
-    model (object) : model that will be pruned
-    pruning_method (str) : method of pruning that will be used
-                           global     : see pytorch global_unstructured function
-                           uniform    : see pytorch prune function, applied to each layer
-    ratio (float) : ratio for pruning
-
-    Returns :
-    ---------
-    model : pruned model with a weight_mask (not remove)
-            For more information, see how pruning is done in pytorch and remove function
-    '''
-
-    if pruning_method == 'uniform':
-        for name, module in model.named_modules():
-            if isinstance(module, torch.nn.Conv2d) or isinstance(module, torch.nn.Linear) :
-                module = prune.l1_unstructured(module, 'weight', ratio)
-
-    elif pruning_method == 'global':
-
-        parameters_to_prune = []
-
-        for name, module in model.named_modules():
-            if isinstance(module, torch.nn.Conv2d) or isinstance(module, torch.nn.Linear) or isinstance(module, torch.nn.BatchNorm2d) or isinstance(module, torch.nn.AvgPool2d)  :
-                parameters_to_prune.append((module,'weight'))
-
-        prune.global_unstructured(
-        parameters_to_prune,
-        pruning_method=prune.L1Unstructured,
-        amount=ratio)
-
-    return model
-
 def get_sparsity(model):
     '''
     Parameters :
@@ -334,15 +297,18 @@ if args.path != None :
 
 ## if pruning is selected, then prune model and print its sparsity
 if args.pruning:
-    backbonemodel = get_prune_model(backbonemodel,args.method,args.ratio)
+    backbonemodel = backbonemodel.get_prune_model(args.method,args.ratio)
     get_sparsity(backbonemodel)
 
 
 ## if --score is selected, then calculate the micronet score of the model
 if args.score :
-    for name, module in backbonemodel.named_modules():
-            if isinstance(module, torch.nn.Conv2d) or isinstance(module, torch.nn.Linear) or isinstance(module, torch.nn.BatchNorm2d) or isinstance(module, torch.nn.AvgPool2d):
-                module = prune.remove(module, 'weight')
+
+    ##check if the model is pruned (has a weight mask)
+    if 'conv1.weight_mask' in state_dict.keys():
+        for name, module in backbonemodel.named_modules():
+                if isinstance(module, torch.nn.Conv2d) or isinstance(module, torch.nn.Linear) or isinstance(module, torch.nn.BatchNorm2d) or isinstance(module, torch.nn.AvgPool2d):
+                    module = prune.remove(module, 'weight')
     get_micronet_score(backbonemodel)
 ## training and test processes
 

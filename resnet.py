@@ -10,6 +10,8 @@ import torch.nn.functional as F
 import utils
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
+from torch.nn.utils import prune
+
 
 
 use_gpu = torch.cuda.is_available()
@@ -317,6 +319,42 @@ class ResNet(nn.Module):
 
         return test_loss,test_acc
 
+    def get_prune_model(self,pruning_method,ratio):
+
+        '''
+        Parameters :
+        ------------
+        model (object) : model that will be pruned
+        pruning_method (str) : method of pruning that will be used
+                               global     : see pytorch global_unstructured function
+                               uniform    : see pytorch prune function, applied to each layer
+        ratio (float) : ratio for pruning
+
+        Returns :
+        ---------
+        model : pruned model with a weight_mask (not remove)
+                For more information, see how pruning is done in pytorch and remove function
+        '''
+
+        if pruning_method == 'uniform':
+            for name, module in self.named_modules():
+                if isinstance(module, torch.nn.Conv2d) or isinstance(module, torch.nn.Linear) :
+                    module = prune.l1_unstructured(module, 'weight', ratio)
+
+        elif pruning_method == 'global':
+
+            parameters_to_prune = []
+
+            for name, module in self.named_modules():
+                if isinstance(module, torch.nn.Conv2d) or isinstance(module, torch.nn.Linear) or isinstance(module, torch.nn.BatchNorm2d) or isinstance(module, torch.nn.AvgPool2d)  :
+                    parameters_to_prune.append((module,'weight'))
+
+            prune.global_unstructured(
+            parameters_to_prune,
+            pruning_method=prune.L1Unstructured,
+            amount=ratio)
+
+        return self
 
 def ResNet18(N, num_blocks ,power_in_planes):
     return ResNet(BasicBlock,num_blocks = num_blocks, num_classes = N, power_in_planes = 4)
