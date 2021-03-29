@@ -50,6 +50,8 @@ Training, test and pruning processes can be easily done directly from the termin
 |  pruning  | bool  | perform pruning on the model | False |
 |  method  | str  | perform pruning on the model (uniform or global) | global |
 |  ratio  | float  | ratio of parameters to prune and total number of parameters | 0.3 |
+|  bin  | bool  | perform binarization (weighted or not, see code) of the model | False |
+
 
 
 ### Examples of commands
