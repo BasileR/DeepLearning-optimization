@@ -1,7 +1,5 @@
 # DeepLearning-optimization
 
-Binarization is not added yet, working on it.
-
 ## Introduction
 
 Hi ! Here is our repository for the AI optimization course at IMT Atlantique. The goal of this course was fitting a neural network for cifar10 and performing quantization and pruning to **minimize the micronet score** of the model. Enjoy !
